@@ -46,3 +46,11 @@ pip install -r requirements.txt
 - [ ] 6. G1 复杂动作任务配置
 - [ ] 7. 训练调试与调参
 - [ ] 8. 评估、ONNX 导出、部署
+
+
+# rsl_rl依赖的安装
+pip install -e ./rsl_rl
+pip install -e ./rsl_rl -i https://pypi.tuna.tsinghua.edu.cn/simple
+
+# 冒烟测试代码
+$env:KMP_DUPLICATE_LIB_OK="TRUE"

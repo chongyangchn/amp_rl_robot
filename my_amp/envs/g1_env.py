@@ -2,7 +2,17 @@ import mujoco
 import numpy as np
 import torch
 
-from rl.utils import quat_to_rotmat
+
+
+def quat_to_rotmat(quat):
+    """四元数 → 3x3 旋转矩阵"""
+    w, x, y, z = quat
+    return np.array([
+        [1 - 2*y*y - 2*z*z,   2*x*y - 2*w*z,     2*x*z + 2*w*y    ],
+        [2*x*y + 2*w*z,       1 - 2*x*x - 2*z*z, 2*y*z - 2*w*x    ],
+        [2*x*z - 2*w*y,       2*y*z + 2*w*x,     1 - 2*x*x - 2*y*y]
+    ])
+
 
 class G1Env:
     def __init__(self, xml_path):
@@ -134,9 +144,14 @@ class G1Env:
         ])
 
         # 合计: 3+3+3+2+29+29+29+2+2 = 102
-
-
         return obs
+
+    def get_obs_vec(self):
+        obs = self._get_obs()
+        return {
+            "policy" : obs, # (policy_dim,)
+            "critic" : obs, # 第一步先和 policy 一样
+        }
     
       
     def _is_done(self):
@@ -173,7 +188,8 @@ class G1Env:
          
         # self.command = np.array([0.3, 0.0])  # 固定的指令
 
-        return self._get_obs()
+        # return self._get_obs()
+        return self.get_obs_vec()
 
 
     # 环境交互
@@ -184,7 +200,7 @@ class G1Env:
         for _ in range(self.action_repeat):
             mujoco.mj_step(self.model, self.data)
 
-        obs = self._get_obs()
+        # obs = self._get_obs()
         reward = self._caculate_reward(action)
         is_done = self._is_done()
         info = {}
@@ -193,7 +209,8 @@ class G1Env:
         self.prev_action = action.copy() 
         self.step_count += 1   
         
-        return obs, reward, is_done, info
+        # return obs, reward, is_done, info
+        return self.get_obs_vec(), reward, is_done, info
 
     def _caculate_reward(self, action):
         sigma = 0.25

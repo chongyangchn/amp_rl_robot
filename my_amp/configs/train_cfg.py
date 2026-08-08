@@ -1,0 +1,41 @@
+TRAIN_CFG = {
+    "algorithm": {
+        "class_name": "PPO",
+        "rnd_cfg": None,               # 必须有
+        "num_learning_epochs": 5,
+        "num_mini_batches": 4,
+        "clip_param": 0.2,
+        "gamma": 0.99,
+        "lam": 0.95,
+        "value_loss_coef": 1.0,
+        "entropy_coef": 0.005,
+        "learning_rate": 3e-4,
+        "schedule": "adaptive",
+        "desired_kl": 0.01,
+        "max_grad_norm": 1.0,
+    },
+    "actor": {
+        "class_name": "MLPModel",
+        "hidden_dims": (256, 128, 64),
+        "activation": "elu",
+        "obs_normalization": True,
+        "distribution_cfg": {
+            "class_name": "GaussianDistribution",
+            "init_std": 1.0,
+            "std_type": "scalar",
+        },
+    },
+    "critic": {
+        "class_name": "MLPModel",
+        "hidden_dims": (256, 128, 64),
+        "activation": "elu",
+        "obs_normalization": True,
+    },
+    "obs_groups": {"actor": ["policy"], "critic": ["critic"]},
+    "num_steps_per_env": 24,
+    "save_interval": 50,
+    "logger": "tensorboard",
+    "max_iterations": 50,
+    "num_envs": 8,
+    "seed": 42,
+}
