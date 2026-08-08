@@ -1,0 +1,27 @@
+# Python
+__pycache__/
+*.py[cod]
+*.egg-info/
+.venv/
+venv/
+
+# Training artifacts
+logs/
+outputs/
+*.onnx
+*.pt
+*.mp4
+*.log
+
+# Large data archives: keep out of git, transfer with scp or download on server
+SFU.tar.bz2
+*.tar.bz2
+data/motions/*
+!data/motions/.gitkeep
+
+# Editors and OS
+.vscode/
+.idea/
+新建文件夹/
+.DS_Store
+Thumbs.db

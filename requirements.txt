@@ -1,0 +1,5 @@
+-e ./rsl_rl
+mujoco
+tensordict>=0.7.0
+tensorboard
+scipy
