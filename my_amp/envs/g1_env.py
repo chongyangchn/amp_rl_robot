@@ -181,10 +181,11 @@ class G1Env:
         self.step_count = 0                         # ← 加这行
 
         # ── 随机化速度指令（提升泛化性） ──
-        self.command = np.array([
-            np.random.uniform(0.2, 0.6),  # 前向速度 0.2~0.6 m/s
-            np.random.uniform(-0.5, 0.5), # 转向速度 -0.5~0.5 rad/s
-        ])
+        # self.command = np.array([
+        #     np.random.uniform(0.2, 0.6),  # 前向速度 0.2~0.6 m/s
+        #     np.random.uniform(-0.5, 0.5), # 转向速度 -0.5~0.5 rad/s
+        # ])
+        self.command = np.array([0.0, 0.0])
          
         # self.command = np.array([0.3, 0.0])  # 固定的指令
 
@@ -216,74 +217,110 @@ class G1Env:
         sigma = 0.25
         rot = self._cached_rot
 
-        # 1、线速度跟踪
-        lin_vel = self.data.qvel[:3]
-        local_lin_vel = rot.T @ lin_vel
-        lin_vel_error = np.sum((self.command[[0]] - local_lin_vel[[0]]) ** 2)
-        track_lin_vel_reward = np.exp(-lin_vel_error / sigma ** 2)
+        # # 1、线速度跟踪
+        # lin_vel = self.data.qvel[:3]
+        # local_lin_vel = rot.T @ lin_vel
+        # lin_vel_error = np.sum((self.command[[0]] - local_lin_vel[[0]]) ** 2)
+        # track_lin_vel_reward = np.exp(-lin_vel_error / sigma ** 2)
 
-        # 2、角速度跟踪
-        ang_vel = self.data.qvel[3:6]
-        local_ang_vel = rot.T @ ang_vel
-        ang_vel_error = np.sum((self.command[1] - local_ang_vel[2]) ** 2)
-        track_ang_vel_reward = np.exp(-ang_vel_error / sigma ** 2)
+        # # 2、角速度跟踪
+        # ang_vel = self.data.qvel[3:6]
+        # local_ang_vel = rot.T @ ang_vel
+        # ang_vel_error = np.sum((self.command[1] - local_ang_vel[2]) ** 2)
+        # track_ang_vel_reward = np.exp(-ang_vel_error / sigma ** 2)
         
-        # 3、直立奖励
+        # # 3、直立奖励
+        # projected_gravity = rot.T @ np.array([0.0, 0.0, -1.0])
+        # upright_error = np.sum(projected_gravity[:2] ** 2)
+        # upright_reward = np.exp(-upright_error / sigma ** 2)
+
+        # # 4、足部动作
+        # # ── 步态奖励 ──
+        # foot_contact = self._get_foot_contacts()
+        # gait_reward = 0.0
+        # command_mag = abs(self.command[0]) + abs(self.command[1])
+        # if command_mag > 0.1:
+        #     # 期望的步态模式：相位前半周期左腿着地、右腿摆动
+        #     phase_val = (self.step_count * self.dt) % self.gait_period
+        #     left_should_be_contact = 1.0 if np.sin(2*np.pi*phase_val/self.gait_period) > 0 else 0.0
+        #     right_should_be_contact = 1.0 - left_should_be_contact
+
+        #     gait_reward = (
+        #         1.0
+        #         - 0.5 * abs(foot_contact[0] - left_should_be_contact)
+        #         - 0.5 * abs(foot_contact[1] - right_should_be_contact)
+        #     )
+
+        # # ── 手臂摆动奖励（手臂与对侧腿同步摆动） ──
+        # # 关节索引假设：双腿 12 个 → 腰 3 个 → 左臂 7 个 → 右臂 7 个
+        # # qpos[7:] 的 [0:12] 是腿，[12:15] 是腰，[15:22] 是左臂，[22:29] 是右臂
+        # joint_pos = self.data.qpos[7:] - self.default_joint_pos
+        # # 左髋 pitch ≈ 索引 0，右髋 pitch ≈ 索引 6
+        # left_hip = joint_pos[0]
+        # right_hip = joint_pos[6]
+        # # 左肩 pitch ≈ 索引 15，右肩 pitch ≈ 索引 22
+        # left_shoulder = joint_pos[15]
+        # right_shoulder = joint_pos[22]
+
+        # # 期望：左肩应与右髋同相（右手在前时左腿在前）
+        # arm_swing_reward = (
+        #     + np.exp(-(left_shoulder - right_hip * 0.6) ** 2 / 0.5 ** 2)
+        #     + np.exp(-(right_shoulder - left_hip * 0.6) ** 2 / 0.5 ** 2)
+        # ) * 0.5
+
+        # # 5、动作平滑出发
+        # action_rate_penalty = np.mean((action - self.prev_action)**2)
+
+        # # 6、生存奖励
+        # survival_reward = 1.0
+
+        # total_reward = (
+        #     + 2.0 * track_lin_vel_reward
+        #     + 1.0 * track_ang_vel_reward
+        #     + 1.0 * upright_reward
+        #     + 0.5 * gait_reward
+        #     + 0.3 * arm_swing_reward
+        #     - 0.01 * action_rate_penalty
+        #     + 0.5 * survival_reward
+        # ) / 100.0
+
         projected_gravity = rot.T @ np.array([0.0, 0.0, -1.0])
-        upright_error = np.sum(projected_gravity[:2] ** 2)
-        upright_reward = np.exp(-upright_error / sigma ** 2)
-
-        # 4、足部动作
-        # ── 步态奖励 ──
-        foot_contact = self._get_foot_contacts()
-        gait_reward = 0.0
-        command_mag = abs(self.command[0]) + abs(self.command[1])
-        if command_mag > 0.1:
-            # 期望的步态模式：相位前半周期左腿着地、右腿摆动
-            phase_val = (self.step_count * self.dt) % self.gait_period
-            left_should_be_contact = 1.0 if np.sin(2*np.pi*phase_val/self.gait_period) > 0 else 0.0
-            right_should_be_contact = 1.0 - left_should_be_contact
-
-            gait_reward = (
-                1.0
-                - 0.5 * abs(foot_contact[0] - left_should_be_contact)
-                - 0.5 * abs(foot_contact[1] - right_should_be_contact)
-            )
-
-        # ── 手臂摆动奖励（手臂与对侧腿同步摆动） ──
-        # 关节索引假设：双腿 12 个 → 腰 3 个 → 左臂 7 个 → 右臂 7 个
-        # qpos[7:] 的 [0:12] 是腿，[12:15] 是腰，[15:22] 是左臂，[22:29] 是右臂
-        joint_pos = self.data.qpos[7:] - self.default_joint_pos
-        # 左髋 pitch ≈ 索引 0，右髋 pitch ≈ 索引 6
-        left_hip = joint_pos[0]
-        right_hip = joint_pos[6]
-        # 左肩 pitch ≈ 索引 15，右肩 pitch ≈ 索引 22
-        left_shoulder = joint_pos[15]
-        right_shoulder = joint_pos[22]
-
-        # 期望：左肩应与右髋同相（右手在前时左腿在前）
-        arm_swing_reward = (
-            + np.exp(-(left_shoulder - right_hip * 0.6) ** 2 / 0.5 ** 2)
-            + np.exp(-(right_shoulder - left_hip * 0.6) ** 2 / 0.5 ** 2)
-        ) * 0.5
-
-        # 5、动作平滑出发
-        action_rate_penalty = np.mean((action - self.prev_action)**2)
-
-        # 6、生存奖励
-        survival_reward = 1.0
-
+        upright_err = np.sum(projected_gravity[:2] ** 2)
+        height_err = (self.data.qpos[2] - self.target_height) ** 2
+        action_rate = np.mean((action - self.prev_action) ** 2)
         total_reward = (
-            + 2.0 * track_lin_vel_reward
-            + 1.0 * track_ang_vel_reward
-            + 1.0 * upright_reward
-            + 0.5 * gait_reward
-            + 0.3 * arm_swing_reward
-            - 0.01 * action_rate_penalty
-            + 0.5 * survival_reward
-        ) / 100.0
+            + 1.0 * np.exp(-upright_err / 0.05)
+            + 1.0 * np.exp(-height_err / 0.01)
+            + 0.2
+            - 0.01 * action_rate
+        )
+
         return total_reward
 
+    def reset_to_ref(self, qpos, qvel=None):
+        mujoco.mj_resetData(self.model, self.data)
+
+        self.data.qpos[:] = qpos
+        self.data.qpos[3:7] /= np.linalg.norm(self.data.qpos[3:7])
+
+        if qvel is not None:
+            self.data.qvel[:] = qvel
+        else:
+            self.data.qvel[:] = 0.0
+
+        mujoco.mj_forward(self.model, self.data)
+
+        ref_joint_pos = qpos[7:]
+
+        self.prev_action = np.clip(
+            (ref_joint_pos - self.default_joint_pos) / self.action_scale,
+            -1.0,
+            1.0,
+        )
+        self.step_count = 0
+        self.command = np.array([0.0, 0.0], dtype=np.float32)
+
+        return self.get_obs_vec()
 
     
         

@@ -33,9 +33,9 @@ TRAIN_CFG = {
     },
     "obs_groups": {"actor": ["policy"], "critic": ["critic"]},
     "num_steps_per_env": 24,
-    "save_interval": 50,
+    "save_interval": 100,
     "logger": "tensorboard",
-    "max_iterations": 50,
-    "num_envs": 8,
+    "max_iterations": 1000,
+    "num_envs": 32,
     "seed": 42,
 }

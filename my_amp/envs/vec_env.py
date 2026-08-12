@@ -8,6 +8,7 @@ from my_amp.envs.g1_env import G1Env
 class G1VecEnv(VecEnv):
     def __init__(self, num_envs=16, xml_path="my_amp/envs/unitree_g1/scene.xml", max_episode_length=300):
         self.num_envs = num_envs
+        # self.num_actions = self.envs[0].action_dim
         self.num_actions = 29
         self.max_episode_length = max_episode_length
         self.device = "cpu"
