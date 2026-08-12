@@ -26,17 +26,23 @@ def save_g1_motion(
         body_lin_vel_w=None,
         body_ang_vel_w=None,
 ):
-    np.savez(
-        path,
-        fps=np.asarray([fps], dtype=np.float64),
-        joint_pos=np.asarray(joint_pos, dtype=np.float32),
-        joint_vel=np.asarray(joint_vel, dtype=np.float32),
-        root_pos=np.asarray(root_pos, dtype=np.float32),
-        root_quat=np.asarray(root_quat, dtype=np.float32),
-        root_lin_vel=np.asarray(root_lin_vel, dtype=np.float32),
-        root_ang_vel=np.asarray(root_ang_vel, dtype=np.float32),
-        body_pos_w=np.asarray(body_pos_w, dtype=np.float32),
-        body_quat_w=np.asarray(body_quat_w, dtype=np.float32),
-        body_lin_vel_w=np.asarray(body_lin_vel_w, dtype=np.float32),
-        body_ang_vel_w=np.asarray(body_ang_vel_w, dtype=np.float32),
-    )
+    data = {
+        "fps": np.asarray([fps], dtype=np.float64),
+        "joint_pos": np.asarray(joint_pos, dtype=np.float32),
+        "joint_vel": np.asarray(joint_vel, dtype=np.float32),
+        "root_pos": np.asarray(root_pos, dtype=np.float32),
+        "root_quat": np.asarray(root_quat, dtype=np.float32),
+        "root_lin_vel": np.asarray(root_lin_vel, dtype=np.float32),
+        "root_ang_vel": np.asarray(root_ang_vel, dtype=np.float32),
+    }
+
+    if body_pos_w is not None:
+        data["body_pos_w"] = np.asarray(body_pos_w, dtype=np.float32)
+    if body_quat_w is not None:
+        data["body_quat_w"] = np.asarray(body_quat_w, dtype=np.float32)
+    if body_lin_vel_w is not None:
+        data["body_lin_vel_w"] = np.asarray(body_lin_vel_w, dtype=np.float32)
+    if body_ang_vel_w is not None:
+        data["body_ang_vel_w"] = np.asarray(body_ang_vel_w, dtype=np.float32)
+
+    np.savez(path, **data)
