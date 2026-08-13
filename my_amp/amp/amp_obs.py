@@ -2,7 +2,7 @@ import numpy as np
 
 def quat_conjugate(q):
     """wxyz 四元数取共轭"""
-    return np.array(1[0], -q[1], -q[2], -q[3])
+    return np.array([q[0], -q[1], -q[2], -q[3]])
 
 
 def quat_mul(q1, q2):

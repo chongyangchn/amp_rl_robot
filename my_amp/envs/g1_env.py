@@ -1,6 +1,7 @@
 import mujoco
 import numpy as np
 import torch
+from my_amp.amp.amp_obs import compute_amp_features
 
 
 
@@ -322,5 +323,15 @@ class G1Env:
 
         return self.get_obs_vec()
 
+    
+    def get_amp_obs(self, body_idx, anchor_idx):
+        return compute_amp_features(
+            self.data.xpos,
+            self.data.xquat,
+            self.data.cvel[:, 3:],   # MuJoCo cvel: 前3是角速度，后3是线速度
+            self.data.cvel[:, :3],
+            body_idx,
+            anchor_idx,
+        )
     
         
