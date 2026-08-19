@@ -177,8 +177,8 @@ def test5():
 
     print("collected policy pairs:", len(policy_pairs))
 
-def test6():
-    
+# def test6():
+
 
 if __name__ == "__main__":
     # test1()
@@ -186,4 +186,4 @@ if __name__ == "__main__":
     # test3()
     # test4()
     # test5()
-    test6()
+    # test6()

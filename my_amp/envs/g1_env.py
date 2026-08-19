@@ -16,11 +16,38 @@ def quat_to_rotmat(quat):
 
 
 class G1Env:
-    def __init__(self, xml_path):
+    def __init__(self, xml_path, amp_body_names=None, amp_anchor_name=None):
         # -------- 1. 加载模型 --------
         self.model = mujoco.MjModel.from_xml_path(xml_path)
         self.data = mujoco.MjData(self.model)
 
+
+        self.body_names = [
+            mujoco.mj_id2name(self.model, mujoco.mjtObj.mjOBJ_BODY, i)
+            for i in range(1, self.model.nbody)
+        ]
+        # 1. 处理 AMP 身体索引 (amp_body_idx)
+        if amp_body_names is not None:
+            # 从已有的 body_names 列表中查找对应的索引
+            self.amp_body_idx = [self.body_names.index(name) for name in amp_body_names]
+        else:
+            default_bodies = ["left_foot", "right_foot", "left_hand", "right_hand", "head"]
+            self.amp_body_idx = [self.body_names.index(name) for name in default_bodies if name in self.body_names]
+            if not self.amp_body_idx:
+                raise ValueError("G1Env: 无法找到 AMP 需要的身体部位名称，请手动传入 amp_body_names")
+
+        # 2. 处理 AMP 锚点索引 (amp_anchor_idx)
+        if amp_anchor_name is not None:
+            self.amp_anchor_idx = self.body_names.index(amp_anchor_name)
+        else:
+            # 默认用 "pelvis" 或 "torso"
+            if "pelvis" in self.body_names:
+                self.amp_anchor_idx = self.body_names.index("pelvis")
+            elif "torso" in self.body_names:
+                self.amp_anchor_idx = self.body_names.index("torso")
+            else:
+                # 极端情况，用第一个身体部位（通常就是根）
+                self.amp_anchor_idx = 0
 
         # -------- 2. 动作重复与时间步长 --------
         self.action_repeat = 2 
@@ -152,6 +179,7 @@ class G1Env:
         return {
             "policy" : obs, # (policy_dim,)
             "critic" : obs, # 第一步先和 policy 一样
+            "amp": self.get_amp_obs(self.amp_body_idx, self.amp_anchor_idx),
         }
     
       
@@ -188,8 +216,6 @@ class G1Env:
         # ])
         self.command = np.array([0.0, 0.0])
          
-        # self.command = np.array([0.3, 0.0])  # 固定的指令
-
         # return self._get_obs()
         return self.get_obs_vec()
 
@@ -203,6 +229,8 @@ class G1Env:
             mujoco.mj_step(self.model, self.data)
 
         # obs = self._get_obs()
+        # 关键：reward 前刷新当前姿态
+        self._cached_rot = quat_to_rotmat(self.data.qpos[3:7])
         reward = self._caculate_reward(action)
         is_done = self._is_done()
         info = {}
@@ -298,7 +326,7 @@ class G1Env:
 
         return total_reward
 
-    def reset_to_ref(self, qpos, qvel=None):
+    def reset_to_ref(self, qpos, qvel=None, command=None):
         mujoco.mj_resetData(self.model, self.data)
 
         self.data.qpos[:] = qpos
@@ -319,17 +347,20 @@ class G1Env:
             1.0,
         )
         self.step_count = 0
-        self.command = np.array([0.0, 0.0], dtype=np.float32)
+        if command is None:
+            self.command = np.array([0.0, 0.0], dtype=np.float32)
+        else:
+            self.command = np.array(command, dtype=np.float32)
 
-        return self.get_obs_vec()
+            return self.get_obs_vec()
 
     
     def get_amp_obs(self, body_idx, anchor_idx):
         return compute_amp_features(
-            self.data.xpos,
-            self.data.xquat,
-            self.data.cvel[:, 3:],   # MuJoCo cvel: 前3是角速度，后3是线速度
-            self.data.cvel[:, :3],
+            self.data.xpos[1:],
+            self.data.xquat[1:],
+            self.data.cvel[1:, 3:],
+            self.data.cvel[1:, :3],
             body_idx,
             anchor_idx,
         )

@@ -31,11 +31,40 @@ TRAIN_CFG = {
         "activation": "elu",
         "obs_normalization": True,
     },
+    "amp": {
+        "motion_dir": "data/motions",
+        "body_names": [
+            "pelvis", "torso_link",
+            "left_hip_yaw_link", "left_knee_link", "left_ankle_pitch_link",
+            "right_hip_yaw_link", "right_knee_link", "right_ankle_pitch_link",
+            "left_shoulder_pitch_link", "left_elbow_link", "left_wrist_pitch_link",
+            "right_shoulder_pitch_link", "right_elbow_link", "right_wrist_pitch_link",
+        ],
+        "anchor_name": "pelvis",
+        "amp_obs_dim": 210,
+        "amp_reward_coef": 0.1,
+        "task_reward_lerp": 0.75,
+        "disc_learning_rate": 3e-4,
+        "disc_hidden_dims": (512, 256, 128),
+        "replay_buffer_size": 1_000_000,
+        "disc_batch_size": 512,
+        "disc_updates_per_iter": 1,
+        "reset_from_ref_prob": 0.8,
+        "use_ref_command": True,
+    },
     "obs_groups": {"actor": ["policy"], "critic": ["critic"]},
     "num_steps_per_env": 24,
     "save_interval": 100,
     "logger": "tensorboard",
-    "max_iterations": 1000,
-    "num_envs": 32,
+    "max_iterations": 20,
+    "num_envs": 16,
     "seed": 42,
+    "multi_gpu": None,
+
+    "motion": {
+        "motion_dir": "data/motions",
+        "reset_from_ref_prob": 0.8,
+        "use_ref_command": True,
+    }
 }
+

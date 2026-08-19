@@ -34,8 +34,11 @@ class MotionLoader:
         )
 
     def get_reset_state(self, rng=None):
-        _, motion, idx = self.sample(rng)
+        name, motion, idx = self.sample(rng)
         root_pos, root_quat, root_lin_vel, root_ang_vel = self._root_state(motion, idx)
+
+        # 用根速度作为任务命令，例如：
+        command = np.array([root_lin_vel[0], root_ang_vel[2]], dtype=np.float32)
 
         qpos = np.zeros(36, dtype=np.float64)
         qpos[:3] = root_pos
@@ -48,5 +51,5 @@ class MotionLoader:
         qvel[3:6] = root_ang_vel
         qvel[6:] = motion["joint_vel"][idx]
 
-        return qpos, qvel
+        return qpos, qvel, command
 
