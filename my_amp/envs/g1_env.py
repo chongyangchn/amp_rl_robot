@@ -31,7 +31,22 @@ class G1Env:
             # 从已有的 body_names 列表中查找对应的索引
             self.amp_body_idx = [self.body_names.index(name) for name in amp_body_names]
         else:
-            default_bodies = ["left_foot", "right_foot", "left_hand", "right_hand", "head"]
+            default_bodies = [
+                "pelvis",
+                "torso_link",
+                "left_hip_yaw_link",
+                "left_knee_link",
+                "left_ankle_pitch_link",
+                "right_hip_yaw_link",
+                "right_knee_link",
+                "right_ankle_pitch_link",
+                "left_shoulder_pitch_link",
+                "left_elbow_link",
+                "left_wrist_pitch_link",
+                "right_shoulder_pitch_link",
+                "right_elbow_link",
+                "right_wrist_pitch_link",
+            ]
             self.amp_body_idx = [self.body_names.index(name) for name in default_bodies if name in self.body_names]
             if not self.amp_body_idx:
                 raise ValueError("G1Env: 无法找到 AMP 需要的身体部位名称，请手动传入 amp_body_names")
@@ -246,84 +261,28 @@ class G1Env:
         sigma = 0.25
         rot = self._cached_rot
 
-        # # 1、线速度跟踪
-        # lin_vel = self.data.qvel[:3]
-        # local_lin_vel = rot.T @ lin_vel
-        # lin_vel_error = np.sum((self.command[[0]] - local_lin_vel[[0]]) ** 2)
-        # track_lin_vel_reward = np.exp(-lin_vel_error / sigma ** 2)
+        local_lin_vel = rot.T @ self.data.qvel[:3]
+        local_ang_vel = rot.T @ self.data.qvel[3:6]
 
-        # # 2、角速度跟踪
-        # ang_vel = self.data.qvel[3:6]
-        # local_ang_vel = rot.T @ ang_vel
-        # ang_vel_error = np.sum((self.command[1] - local_ang_vel[2]) ** 2)
-        # track_ang_vel_reward = np.exp(-ang_vel_error / sigma ** 2)
-        
-        # # 3、直立奖励
-        # projected_gravity = rot.T @ np.array([0.0, 0.0, -1.0])
-        # upright_error = np.sum(projected_gravity[:2] ** 2)
-        # upright_reward = np.exp(-upright_error / sigma ** 2)
+        lin_vel_error = float((self.command[0] - local_lin_vel[0]) ** 2)
+        ang_vel_error = float((self.command[1] - local_ang_vel[2]) ** 2)
 
-        # # 4、足部动作
-        # # ── 步态奖励 ──
-        # foot_contact = self._get_foot_contacts()
-        # gait_reward = 0.0
-        # command_mag = abs(self.command[0]) + abs(self.command[1])
-        # if command_mag > 0.1:
-        #     # 期望的步态模式：相位前半周期左腿着地、右腿摆动
-        #     phase_val = (self.step_count * self.dt) % self.gait_period
-        #     left_should_be_contact = 1.0 if np.sin(2*np.pi*phase_val/self.gait_period) > 0 else 0.0
-        #     right_should_be_contact = 1.0 - left_should_be_contact
-
-        #     gait_reward = (
-        #         1.0
-        #         - 0.5 * abs(foot_contact[0] - left_should_be_contact)
-        #         - 0.5 * abs(foot_contact[1] - right_should_be_contact)
-        #     )
-
-        # # ── 手臂摆动奖励（手臂与对侧腿同步摆动） ──
-        # # 关节索引假设：双腿 12 个 → 腰 3 个 → 左臂 7 个 → 右臂 7 个
-        # # qpos[7:] 的 [0:12] 是腿，[12:15] 是腰，[15:22] 是左臂，[22:29] 是右臂
-        # joint_pos = self.data.qpos[7:] - self.default_joint_pos
-        # # 左髋 pitch ≈ 索引 0，右髋 pitch ≈ 索引 6
-        # left_hip = joint_pos[0]
-        # right_hip = joint_pos[6]
-        # # 左肩 pitch ≈ 索引 15，右肩 pitch ≈ 索引 22
-        # left_shoulder = joint_pos[15]
-        # right_shoulder = joint_pos[22]
-
-        # # 期望：左肩应与右髋同相（右手在前时左腿在前）
-        # arm_swing_reward = (
-        #     + np.exp(-(left_shoulder - right_hip * 0.6) ** 2 / 0.5 ** 2)
-        #     + np.exp(-(right_shoulder - left_hip * 0.6) ** 2 / 0.5 ** 2)
-        # ) * 0.5
-
-        # # 5、动作平滑出发
-        # action_rate_penalty = np.mean((action - self.prev_action)**2)
-
-        # # 6、生存奖励
-        # survival_reward = 1.0
-
-        # total_reward = (
-        #     + 2.0 * track_lin_vel_reward
-        #     + 1.0 * track_ang_vel_reward
-        #     + 1.0 * upright_reward
-        #     + 0.5 * gait_reward
-        #     + 0.3 * arm_swing_reward
-        #     - 0.01 * action_rate_penalty
-        #     + 0.5 * survival_reward
-        # ) / 100.0
+        track_lin_reward = np.exp(-lin_vel_error / sigma ** 2)
+        track_ang_reward = np.exp(-ang_vel_error / sigma ** 2)
 
         projected_gravity = rot.T @ np.array([0.0, 0.0, -1.0])
         upright_err = np.sum(projected_gravity[:2] ** 2)
         height_err = (self.data.qpos[2] - self.target_height) ** 2
         action_rate = np.mean((action - self.prev_action) ** 2)
+
         total_reward = (
+            + 2.0 * track_lin_reward
+            + 1.0 * track_ang_reward
             + 1.0 * np.exp(-upright_err / 0.05)
             + 1.0 * np.exp(-height_err / 0.01)
             + 0.2
             - 0.01 * action_rate
         )
-
         return total_reward
 
     def reset_to_ref(self, qpos, qvel=None, command=None):
@@ -352,7 +311,7 @@ class G1Env:
         else:
             self.command = np.array(command, dtype=np.float32)
 
-            return self.get_obs_vec()
+        return self.get_obs_vec()
 
     
     def get_amp_obs(self, body_idx, anchor_idx):

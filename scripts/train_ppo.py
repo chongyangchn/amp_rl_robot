@@ -2,7 +2,7 @@ import os
 
 os.environ["KMP_DUPLICATE_LIB_OK"] = "TRUE"
 
-from rsl_rl.rsl_rl.runners import OnPolicyRunner
+from rsl_rl.runners import OnPolicyRunner
 from my_amp.envs.vec_env import G1VecEnv
 from my_amp.configs.train_cfg import TRAIN_CFG
 

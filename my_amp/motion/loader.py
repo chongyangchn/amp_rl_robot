@@ -1,6 +1,6 @@
 from pathlib import Path
 import numpy as np
-
+from my_amp.amp.amp_obs import quat_to_rotmat
 
 class MotionLoader:
     def __init__(self, motion_dir="data/motions"):
@@ -34,11 +34,18 @@ class MotionLoader:
         )
 
     def get_reset_state(self, rng=None):
+        qpos, qvel, command = self.get_reset_state_with_command(rng)
+        return qpos, qvel
+
+    def get_reset_state_with_command(self, rng=None):
         name, motion, idx = self.sample(rng)
         root_pos, root_quat, root_lin_vel, root_ang_vel = self._root_state(motion, idx)
 
-        # 用根速度作为任务命令，例如：
-        command = np.array([root_lin_vel[0], root_ang_vel[2]], dtype=np.float32)
+        # 把 root 速度转到 root 局部系，作为前向速度和转向速度命令
+        R = quat_to_rotmat(root_quat)
+        local_lin_vel = R.T @ root_lin_vel
+        local_ang_vel = R.T @ root_ang_vel
+        command = np.array([local_lin_vel[0], local_ang_vel[2]], dtype=np.float32)
 
         qpos = np.zeros(36, dtype=np.float64)
         qpos[:3] = root_pos

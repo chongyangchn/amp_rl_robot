@@ -1,7 +1,7 @@
 import torch
 import numpy as np
 from tensordict import TensorDict
-from rsl_rl.rsl_rl.env import VecEnv
+from rsl_rl.env import VecEnv
 from my_amp.envs.g1_env import G1Env
 
 
@@ -68,7 +68,11 @@ class G1VecEnv(VecEnv):
             # 物理 done 或 timeout 都结束
             d = bool(d) or bool(time_outs[i])
             if d:
-                o = env.reset()
+                if self.motion_loader is not None and self.rng.random() < self.reset_from_ref_prob:
+                    qpos, qvel, command = self.motion_loader.get_reset_state_with_command(self.rng)
+                    o = env.reset_to_ref(qpos, qvel, command)
+                else:
+                    o = env.reset()
 
             obs_list.append(o)
             rewards[i] = r

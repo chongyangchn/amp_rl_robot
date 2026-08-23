@@ -65,7 +65,7 @@ class AMPRunner:
         self.writer = SummaryWriter(log_dir=log_dir) if log_dir else None
         self.current_learning_iteration = 0
 
-        self.motion_loader = MotionLoader(self.amp_cfg["motion_dir"])
+        # self.motion_loader = MotionLoader(self.amp_cfg["motion_dir"])
 
     def learn(self, num_learning_iterations):
         obs = self.env.get_observations().to(self.device)
