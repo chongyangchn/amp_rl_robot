@@ -5,7 +5,7 @@ import torch
 from my_amp.motion.amp_loader import AMPLoader
 from my_amp.envs.g1_env import G1Env
 from my_amp.amp.discriminator import Discriminator
-from my_amp.motion.loader import MotionLoader
+from my_amp.motion.motion_loader import MotionLoader
 
 
 def test1():

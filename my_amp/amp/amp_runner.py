@@ -9,7 +9,7 @@ from my_amp.amp.amp_ppo import AMPPPO
 from my_amp.amp.discriminator import Discriminator
 from my_amp.motion.amp_loader import AMPLoader
 from my_amp.storage.replay_buffer import ReplayBuffer
-from my_amp.motion.loader import MotionLoader
+from my_amp.motion.motion_loader import MotionLoader
 
 
 class AMPRunner:
@@ -69,6 +69,11 @@ class AMPRunner:
 
     def learn(self, num_learning_iterations):
         obs = self.env.get_observations().to(self.device)
+        if hasattr(self.env, "reset_all_to_ref"):
+            obs = self.env.reset_all_to_ref().to(self.device)
+        else:
+            obs = self.env.get_observations().to(self.device)
+
         self.alg.train_mode()
 
         for it in range(num_learning_iterations):

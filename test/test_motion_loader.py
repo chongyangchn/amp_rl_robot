@@ -11,7 +11,7 @@ class MotionLoader:
         if not self.names:
             raise FileNotFoundError(f"no npz found in {motion_dir}")
 
-    def sample(self, rng):
+    def sample(self, rng=None):
         rng = rng if rng is not None else np.random.default_rng()
         name = rng.choice(self.names)
         motion = self.motions[name]
@@ -20,6 +20,7 @@ class MotionLoader:
 
     def _root_state(self, motion, idx):
         if "root_pos" in motion:
+            # 自己转换的动作源
             return (
                 motion["root_pos"][idx],
                 motion["root_quat"][idx],
@@ -27,6 +28,7 @@ class MotionLoader:
                 motion["root_ang_vel"][idx],
             )
         return (
+            # 这里是AMP_mjlab的动作源
             motion["body_pos_w"][idx, 0],
             motion["body_quat_w"][idx, 0],
             motion["body_lin_vel_w"][idx, 0],
@@ -60,3 +62,13 @@ class MotionLoader:
 
         return qpos, qvel, command
 
+md = MotionLoader("data/motions")
+print(f"loaded {len(md.names)} motions, example: {md.names[0]}")
+
+
+qpos, qvel= md.get_reset_state()
+print(f"reset state qpos shape={qpos.shape}, qvel shape={qvel.shape}")
+print(f"reset state qpos {qpos}, qvel {qvel}")
+
+name, motion, idx = md.sample()
+print(f"sampled motion {name}, idx={idx}, joint_pos shape={motion['joint_pos'].shape}")

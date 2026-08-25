@@ -50,6 +50,18 @@ class G1VecEnv(VecEnv):
     def get_observations(self):
         return self._make_td([e.get_obs_vec() for e in self.envs])
 
+    def reset_all_to_ref(self):
+        obs_list = []
+
+        if self.motion_loader is None:
+            return self.get_observations()
+
+        for env in self.envs:
+            qpos, qvel, command = self.motion_loader.get_reset_state_with_command(self.rng)
+            obs_list.append(env.reset_to_ref(qpos, qvel, command))
+
+        return self._make_td(obs_list)
+
     def step(self, actions):
         obs_list = []
         rewards = np.zeros(self.num_envs, dtype=np.float32)

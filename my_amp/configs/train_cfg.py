@@ -21,7 +21,7 @@ TRAIN_CFG = {
         "obs_normalization": True,
         "distribution_cfg": {
             "class_name": "GaussianDistribution",
-            "init_std": 1.0,
+            "init_std": 0.3,
             "std_type": "scalar",
         },
     },
@@ -43,11 +43,10 @@ TRAIN_CFG = {
         ],
         "anchor_name": "pelvis",
         "amp_obs_dim": 210,
-        "amp_reward_coef": 0.1,
-    
-        "task_reward_lerp": 0.75,
-        "disc_learning_rate": 3e-4,
-        "disc_hidden_dims": (512, 256, 128),
+        "amp_reward_coef": 0.5,    
+        "task_reward_lerp": 0.3,
+        "disc_learning_rate": 1e-4,
+        "disc_hidden_dims": (256, 128),
         "replay_buffer_size": 1_000_000,
         "disc_batch_size": 512,
         "disc_updates_per_iter": 1,
@@ -58,11 +57,11 @@ TRAIN_CFG = {
         "num_steps_per_env": 24,
         "save_interval": 200,
         "logger": "tensorboard",
-        "max_iterations": 2000,
+        "max_iterations": 5000,
         "num_envs": 64,
         "seed": 42,
         "multi_gpu": None,
-        
+
     "motion": {
         "motion_dir": "data/motions",
         "reset_from_ref_prob": 0.8,

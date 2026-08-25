@@ -29,7 +29,7 @@ class Discriminator(nn.Module):
     def forward(self, x):
         return self.net(x)
 
-    def compute_grad_pen(self, expert_state, expert_next_state, lambda_=10):
+    def compute_grad_pen(self, expert_state, expert_next_state, lambda_=20):
         expert_data = torch.cat([expert_state, expert_next_state], dim=-1)
         expert_data.requires_grad = True
 
@@ -42,7 +42,8 @@ class Discriminator(nn.Module):
             create_graph=True,
             retain_graph=True,
         )[0]
-        return lambda_ * (grad.norm(2, dim=1) - 0.0).pow(2).mean()
+        # return lambda_ * (grad.norm(2, dim=1) - 0.0).pow(2).mean()
+        return lambda_ * (grad.norm(2, dim=1) - 1.0).pow(2).mean()
 
 
     def predict_amp_reward(self, state, next_state, task_reward):
@@ -50,9 +51,10 @@ class Discriminator(nn.Module):
             self.eval()
             x = torch.cat([state, next_state], dim=-1)
             d = self.net(x)
-            style_reward = self.amp_reward_coef * torch.clamp(
-                1 - 0.25 * (d - 1).square(), min=0.0
-            )
+            # style_reward = self.amp_reward_coef * torch.clamp(
+            #     1 - 0.25 * (d - 1).square(), min=0.0
+            # )
+            style_reward = self.amp_reward_coef * torch.sigmoid(d)
             if self.task_reward_lerp > 0:
                 reward = (1 - self.task_reward_lerp) * style_reward \
                        + self.task_reward_lerp * task_reward.unsqueeze(-1)

@@ -31,6 +31,7 @@ class G1Env:
             # 从已有的 body_names 列表中查找对应的索引
             self.amp_body_idx = [self.body_names.index(name) for name in amp_body_names]
         else:
+            default_bodies = ["left_foot", "right_foot", "left_hand", "right_hand", "head"]
             default_bodies = [
                 "pelvis",
                 "torso_link",
@@ -276,12 +277,12 @@ class G1Env:
         action_rate = np.mean((action - self.prev_action) ** 2)
 
         total_reward = (
-            + 2.0 * track_lin_reward
-            + 1.0 * track_ang_reward
-            + 1.0 * np.exp(-upright_err / 0.05)
-            + 1.0 * np.exp(-height_err / 0.01)
-            + 0.2
-            - 0.01 * action_rate
+            + 6.0 * track_lin_reward
+            + 3.0 * track_ang_reward
+            + 0.5 * np.exp(-upright_err / 0.05)
+            + 0.5 * np.exp(-height_err / 0.01)
+            + 0.1
+            - 0.02 * action_rate
         )
         return total_reward
 

@@ -9,7 +9,7 @@ from my_amp.amp.amp_obs import (
 )
 from my_amp.amp.discriminator import Discriminator
 from my_amp.motion.amp_loader import AMPLoader
-from my_amp.motion.loader import MotionLoader
+from my_amp.motion.motion_loader import MotionLoader
 from my_amp.envs.g1_env import G1Env
 
 BODY_NAMES = [

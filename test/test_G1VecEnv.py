@@ -21,14 +21,10 @@ def main():
         motion_loader=motion_loader,
         reset_from_ref_prob=TRAIN_CFG["amp"]["reset_from_ref_prob"],
     )
-    runner = AMPRunner(
-        env,
-        TRAIN_CFG,
-        log_dir="logs/amp_baseline",
-        device=device,
-    )
-    runner.learn(TRAIN_CFG["max_iterations"])
 
+    print(f"num_envs= {env.num_envs}")
+    print(f"amp_body_names= {env.amp_body_names}")
+    print(f"amp_anchor_name= {env.amp_anchor_name}")
 
 if __name__ == "__main__":
     main()

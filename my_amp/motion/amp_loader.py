@@ -5,6 +5,7 @@ from my_amp.amp.amp_obs import compute_amp_features
 
 
 class AMPLoader:
+    # 从动作文件中进行加载和采样，提供 AMP 判别器的观测数据
     def __init__(self, motion_dir, body_names, anchor_name, all_body_names):
         self.body_idx = [all_body_names.index(n) for n in body_names]
         self.anchor_idx = all_body_names.index(anchor_name)
@@ -12,7 +13,7 @@ class AMPLoader:
 
         for path in sorted(Path(motion_dir).glob("*.npz")):
             d = np.load(path)
-            
+
             # 让 AMPLoader 跳过不合格文件
             required = [
                 "body_pos_w",
