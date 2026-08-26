@@ -18,6 +18,11 @@ SFU.tar.bz2
 *.tar.bz2
 data/motions/*
 !data/motions/.gitkeep
+data/motions_sfu/
+data/motions_walk/
+data/sfu_raw/
+data/smplx/
+data/smplx_patched/
 
 # Editors and OS
 .vscode/

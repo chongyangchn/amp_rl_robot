@@ -284,7 +284,7 @@ class G1Env:
             + 0.1
             - 0.02 * action_rate
         )
-        return total_reward
+        return total_reward * 0.05
 
     def reset_to_ref(self, qpos, qvel=None, command=None):
         mujoco.mj_resetData(self.model, self.data)

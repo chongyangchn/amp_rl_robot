@@ -6,7 +6,7 @@ import mujoco
 import mujoco.viewer
 import numpy as np
 from my_amp.envs.g1_env import G1Env
-from my_amp.motion.loader import MotionLoader
+from my_amp.motion.motion_loader import MotionLoader
 
 def test1():
     env = G1Env("my_amp/envs/unitree_g1/scene.xml")

@@ -6,25 +6,68 @@ import torch
 import numpy as np
 from my_amp.envs.g1_env import G1Env
 from my_amp.envs.vec_env import G1VecEnv
-from my_amp.motion.loader import MotionLoader
+from my_amp.motion.motion_loader import MotionLoader
 from my_amp.configs.train_cfg import TRAIN_CFG
 
 
 def name_of_jSMPL_X ():
     '''
     SMPL-X 的关节名
-    ['pelvis', 'left_hip', 'right_hip', 'spine1', 'left_knee', 
-    'right_knee', 'spine2', 'left_ankle', 'right_ankle', 'spine3', 
-    'left_foot', 'right_foot', 'neck', 'left_collar', 'right_collar', 
-    'head', 'left_shoulder', 'right_shoulder', 'left_elbow', 'right_elbow', 
-    'left_wrist', 'right_wrist', 'jaw', 'left_eye_smplhf', 'right_eye_smplhf', 
-    'left_index1', 'left_index2', 'left_index3', 'left_middle1', 'left_middle2', 
-    'left_middle3', 'left_pinky1', 'left_pinky2', 'left_pinky3', 
-    'left_ring1', 'left_ring2', 'left_ring3', 'left_thumb1', 'left_thumb2', 'left_thumb3', 
-    'right_index1', 'right_index2', 'right_index3', 'right_middle1', 
-    'right_middle2', 'right_middle3', 'right_pinky1', 'right_pinky2', 
-    'right_pinky3', 'right_ring1', 'right_ring2', 'right_ring3', 
-    'right_thumb1', 'right_thumb2', 'right_thumb3']
+    ['pelvis', 
+    'left_hip', 
+    'right_hip', 
+    'spine1', 
+    'left_knee', 
+    'right_knee', 
+    'spine2', 
+    'left_ankle', 
+    'right_ankle', 
+    'spine3', 
+    'left_foot', 
+    'right_foot', 
+    'neck', 
+    'left_collar', 
+    'right_collar', 
+    'head', 
+    'left_shoulder', 
+    'right_shoulder', 
+    'left_elbow', 
+    'right_elbow', 
+    'left_wrist', 
+    'right_wrist', 
+    'jaw', 
+    'left_eye_smplhf', 
+    'right_eye_smplhf', 
+    'left_index1', 
+    'left_index2', 
+    'left_index3', 
+    'left_middle1', 
+    'left_middle2', 
+    'left_middle3', 
+    'left_pinky1', 
+    'left_pinky2', 
+    'left_pinky3', 
+    'left_ring1', 
+    'left_ring2', 
+    'left_ring3', 
+    'left_thumb1', 
+    'left_thumb2', 
+    'left_thumb3', 
+    'right_index1', 
+    'right_index2', 
+    'right_index3', 
+    'right_middle1', 
+    'right_middle2', 
+    'right_middle3', 
+    'right_pinky1', 
+    'right_pinky2', 
+    'right_pinky3', 
+    'right_ring1', 
+    'right_ring2', 
+    'right_ring3', 
+    'right_thumb1', 
+    'right_thumb2', 
+    'right_thumb3']
     '''
     SMPLX_JOINT_NAMES = JOINT_NAMES[:55]  # 前 55 个是 SMPL-X 真正关节
     print("SMPL-X joint names:", SMPLX_JOINT_NAMES)
@@ -52,70 +95,73 @@ def name_mujoco_g1():
 '''
 Mujoco中的关节名
 # 0 floating_base_joint：自由基座，占 qpos 7 维、qvel 6 维
+floating_base_joint 比较特殊，它负责机器人整机在空间中的移动和旋转，所以它占用：
+qpos[0:7] = 3 位置 + 4 四元数
+qvel[0:6] = 3 线速度 + 3 角速度
 # 1~29：G1 的 29 个旋转关节，占 qpos[7:36]、qvel[6:35]
-Joint 0: floating_base_joint
-Joint 1: left_hip_pitch_joint
-Joint 2: left_hip_roll_joint
-Joint 3: left_hip_yaw_joint
-Joint 4: left_knee_joint
-Joint 5: left_ankle_pitch_joint
-Joint 6: left_ankle_roll_joint
-Joint 7: right_hip_pitch_joint
-Joint 8: right_hip_roll_joint
-Joint 9: right_hip_yaw_joint
-Joint 10: right_knee_joint
-Joint 11: right_ankle_pitch_joint
-Joint 12: right_ankle_roll_joint
-Joint 13: waist_yaw_joint
-Joint 14: waist_roll_joint
-Joint 15: waist_pitch_joint
-Joint 16: left_shoulder_pitch_joint
-Joint 17: left_shoulder_roll_joint
-Joint 18: left_shoulder_yaw_joint
-Joint 19: left_elbow_joint
-Joint 20: left_wrist_roll_joint
-Joint 21: left_wrist_pitch_joint
-Joint 22: left_wrist_yaw_joint
-Joint 23: right_shoulder_pitch_joint
-Joint 24: right_shoulder_roll_joint
-Joint 25: right_shoulder_yaw_joint
-Joint 26: right_elbow_joint
-Joint 27: right_wrist_roll_joint
-Joint 28: right_wrist_pitch_joint
-Joint 29: right_wrist_yaw_joint
+Joint 0: floating_base_joint  自由基座关节
+Joint 1: left_hip_pitch_joint 左髋俯仰关节
+Joint 2: left_hip_roll_joint 左髋滚转关节
+Joint 3: left_hip_yaw_joint 左髋偏航关节
+Joint 4: left_knee_joint 左膝关节
+Joint 5: left_ankle_pitch_joint 左踝俯仰关节
+Joint 6: left_ankle_roll_joint 左踝滚转关节
+Joint 7: right_hip_pitch_joint 右髋俯仰关节
+Joint 8: right_hip_roll_joint 右髋滚转关节
+Joint 9: right_hip_yaw_joint 右髋偏航关节
+Joint 10: right_knee_joint 右膝关节
+Joint 11: right_ankle_pitch_joint 右踝俯仰关节
+Joint 12: right_ankle_roll_joint 右踝滚转关节
+Joint 13: waist_yaw_joint 腰部偏航关节
+Joint 14: waist_roll_joint 腰部滚转关节
+Joint 15: waist_pitch_joint 腰部俯仰关节
+Joint 16: left_shoulder_pitch_joint 左肩俯仰关节
+Joint 17: left_shoulder_roll_joint 左肩滚转关节
+Joint 18: left_shoulder_yaw_joint 左肩偏航关节
+Joint 19: left_elbow_joint 左肘关节
+Joint 20: left_wrist_roll_joint 左腕滚转关节
+Joint 21: left_wrist_pitch_joint 左腕俯仰关节
+Joint 22: left_wrist_yaw_joint 左腕偏航关节
+Joint 23: right_shoulder_pitch_joint 右肩俯仰关节
+Joint 24: right_shoulder_roll_joint 右肩滚转关节
+Joint 25: right_shoulder_yaw_joint 右肩偏航关节
+Joint 26: right_elbow_joint 右肘关节
+Joint 27: right_wrist_roll_joint 右腕滚转关节
+Joint 28: right_wrist_pitch_joint 右腕俯仰关节
+Joint 29: right_wrist_yaw_joint 右腕偏航关节
 
 身体名
 Body 0: world
-Body 1: pelvis
-Body 2: left_hip_pitch_link
-Body 3: left_hip_roll_link
-Body 4: left_hip_yaw_link
-Body 5: left_knee_link
-Body 6: left_ankle_pitch_link
-Body 7: left_ankle_roll_link
-Body 8: right_hip_pitch_link
-Body 9: right_hip_roll_link
-Body 10: right_hip_yaw_link
-Body 11: right_knee_link
-Body 12: right_ankle_pitch_link
-Body 13: right_ankle_roll_link
-Body 14: waist_yaw_link
-Body 15: waist_roll_link
-Body 16: torso_link
-Body 17: left_shoulder_pitch_link
-Body 18: left_shoulder_roll_link
-Body 19: left_shoulder_yaw_link
-Body 20: left_elbow_link
-Body 21: left_wrist_roll_link
-Body 22: left_wrist_pitch_link
-Body 23: left_wrist_yaw_link
-Body 24: right_shoulder_pitch_link
-Body 25: right_shoulder_roll_link
-Body 26: right_shoulder_yaw_link
-Body 27: right_elbow_link
-Body 28: right_wrist_roll_link
-Body 29: right_wrist_pitch_link
-Body 30: right_wrist_yaw_link
+Body 1: pelvis 骨盆 / 髋基座
+Body 2: left_hip_pitch_link 左髋俯仰连杆
+Body 3: left_hip_roll_link 左髋横滚连杆
+Body 4: left_hip_yaw_link 左髋偏航连杆
+Body 5: left_knee_link 左膝连杆
+Body 6: left_ankle_pitch_link 左踝俯仰连杆
+Body 7: left_ankle_roll_link 左踝滚转连杆
+Body 8: right_hip_pitch_link 右髋俯仰连杆
+Body 9: right_hip_roll_link 右髋横滚连杆
+Body 10: right_hip_yaw_link 右髋偏航连杆
+Body 11: right_knee_link 右膝连杆
+Body 12: right_ankle_pitch_link 右踝俯仰连杆
+Body 13: right_ankle_roll_link 右踝滚转连杆
+Body 14: waist_yaw_link 腰部偏航连杆
+Body 15: waist_roll_link 腰部滚转连杆
+Body 16: torso_link 躯干连杆
+Body 17: left_shoulder_pitch_link 左肩俯仰连杆
+Body 18: left_shoulder_roll_link 左肩滚转连杆
+Body 19: left_shoulder_yaw_link 左肩偏航连杆
+Body 20: left_elbow_link 左肘连杆
+Body 21: left_wrist_roll_link 左腕滚转连杆
+Body 22: left_wrist_pitch_link 左腕俯仰连杆
+Body 23: left_wrist_yaw_link 左腕偏航连杆
+Body 24: right_shoulder_pitch_link 右肩俯仰连杆
+Body 25: right_shoulder_roll_link 右肩滚转连杆
+Body 26: right_shoulder_yaw_link 右肩偏航连杆
+Body 27: right_elbow_link 右肘连杆
+Body 28: right_wrist_roll_link 右腕滚转连杆
+Body 29: right_wrist_pitch_link 右腕俯仰连杆
+Body 30: right_wrist_yaw_link 右腕偏航连杆
 
 位置
 Site 0: imu_in_pelvis

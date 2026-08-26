@@ -12,6 +12,7 @@ class MotionLoader:
             raise FileNotFoundError(f"no npz found in {motion_dir}")
 
     def sample(self, rng=None):
+        # 随机选一个动作文件 随机选一帧
         rng = rng if rng is not None else np.random.default_rng()
         name = rng.choice(self.names)
         motion = self.motions[name]
@@ -22,10 +23,10 @@ class MotionLoader:
         if "root_pos" in motion:
             # 自己转换的动作源
             return (
-                motion["root_pos"][idx],
-                motion["root_quat"][idx],
-                motion["root_lin_vel"][idx],
-                motion["root_ang_vel"][idx],
+                motion["root_pos"][idx], # (3,)pelvis 世界坐标
+                motion["root_quat"][idx], # (4,)pelvis 四元数 wxyz
+                motion["root_lin_vel"][idx], # (3,)pelvis 世界线速度
+                motion["root_ang_vel"][idx], # (3,)pelvis 世界角速度
             )
         return (
             # 这里是AMP_mjlab的动作源
@@ -63,6 +64,7 @@ class MotionLoader:
         return qpos, qvel, command
 
 md = MotionLoader("data/motions")
+print(f"MotionLoader md type is {type(md)}")
 print(f"loaded {len(md.names)} motions, example: {md.names[0]}")
 
 
@@ -72,3 +74,16 @@ print(f"reset state qpos {qpos}, qvel {qvel}")
 
 name, motion, idx = md.sample()
 print(f"sampled motion {name}, idx={idx}, joint_pos shape={motion['joint_pos'].shape}")
+
+
+print("============ npz文件 ================")
+npz_file =  "data/motions/walk_forward_loop_002__A022.npz"
+f = np.load(npz_file)
+print(f"type of npz_file {npz_file} is {type(f)}")
+print(f"npz_file {npz_file} keys: {list(f.keys())} lens of keys {len(f.keys())}")
+
+for k, v in f.items():
+    print(f"key {k} shape {v.shape} dtype {v.dtype}")
+    print(f"lens of key {k} is {len(v)}")
+
+print(f"key {f.files[0]} is {f[f.files[0]]}")
