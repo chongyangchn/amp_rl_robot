@@ -3,6 +3,7 @@ import time
 import torch
 import mujoco
 from torch.utils.tensorboard import SummaryWriter
+from tqdm import tqdm
 
 from rsl_rl.algorithms import PPO
 from my_amp.amp.amp_ppo import AMPPPO
@@ -76,26 +77,74 @@ class AMPRunner:
 
         self.alg.train_mode()
 
-        for it in range(num_learning_iterations):
+        for it in tqdm(range(num_learning_iterations), desc="AMP training", dynamic_ncols=True):
+            task_rewards = []
+            style_rewards = []
+            final_rewards = []
+            action_list = []
+            done_count = 0
+            done_lengths = []
             start = time.time()
 
             with torch.inference_mode():
                 for _ in range(self.cfg["num_steps_per_env"]):
+                    prev_episode_lengths = self.env.episode_length_buf.clone()
+
                     actions = self.alg.act(obs)
                     obs, rewards, dones, extras = self.env.step(actions.to(self.env.device))
                     obs = obs.to(self.device)
                     rewards = rewards.to(self.device)
                     dones = dones.to(self.device)
-                    self.alg.process_env_step(obs, rewards, dones, extras)
+
+                    step_metrics = self.alg.process_env_step(obs, rewards, dones, extras)
+
+                    task_rewards.append(rewards.mean().item())
+                    style_rewards.append(step_metrics["style_reward"].mean().item())
+                    final_rewards.append(step_metrics["final_reward"].mean().item())
+                    action_list.append(actions)
+
+                    dones_cpu = dones.cpu()
+                    if dones_cpu.any():
+                        done_count += dones_cpu.sum().item()
+                        done_lengths.extend(
+                            (prev_episode_lengths[dones_cpu] + 1).tolist()
+                        )
 
                 self.alg.compute_returns(obs)
 
             loss_dict = self.alg.update()
+            actions_t = torch.cat(action_list, dim=0)
+            total_steps = self.cfg["num_steps_per_env"] * self.env.num_envs
+            done_rate = done_count / total_steps
+            avg_episode_length = sum(done_lengths) / len(done_lengths) if done_lengths else 0.0
             self.current_learning_iteration = it
+
+            if self.writer is not None:
+                tqdm.write(
+                    f"Iter {it:05d} | style {sum(style_rewards) / len(style_rewards):.3f} "
+                    f"| final {sum(final_rewards) / len(final_rewards):.3f} "
+                    f"| ep_len {avg_episode_length:.0f} "
+                    f"| disc_acc {self.alg.last_disc_acc:.3f}"
+                )
 
             if self.writer is not None:
                 self.writer.add_scalar("Loss/discriminator", self.alg.last_disc_loss, it)
                 self.writer.add_scalar("Train/discriminator_acc", self.alg.last_disc_acc, it)
+
+                self.writer.add_scalar("Train/task_reward", sum(task_rewards) / len(task_rewards), it)
+                self.writer.add_scalar("Train/style_reward", sum(style_rewards) / len(style_rewards), it)
+                self.writer.add_scalar("Train/final_reward", sum(final_rewards) / len(final_rewards), it)
+                self.writer.add_scalar("Train/done_rate", done_rate, it)
+                self.writer.add_scalar("Train/episode_length", avg_episode_length, it)
+
+                self.writer.add_scalar("Action/mean", actions_t.mean().item(), it)
+                self.writer.add_scalar("Action/std", actions_t.std().item(), it)
+                self.writer.add_scalar("Action/min", actions_t.min().item(), it)
+                self.writer.add_scalar("Action/max", actions_t.max().item(), it)
+
+                self.writer.add_scalar("Disc/expert_logit", self.alg.last_expert_logit, it)
+                self.writer.add_scalar("Disc/policy_logit", self.alg.last_policy_logit, it)
+                
                 for key, value in loss_dict.items():
                     self.writer.add_scalar(f"Loss/{key}", value, it)
 
@@ -109,4 +158,5 @@ class AMPRunner:
         state = self.alg.save()
         state["iter"] = self.current_learning_iteration
         state["discriminator_state_dict"] = self.discriminator.state_dict()
+        state["disc_optimizer_state_dict"] = self.alg.disc_optimizer.state_dict()
         torch.save(state, path)

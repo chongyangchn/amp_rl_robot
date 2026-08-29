@@ -8,7 +8,7 @@ TRAIN_CFG = {
         "gamma": 0.99,
         "lam": 0.95,
         "value_loss_coef": 1.0,
-        "entropy_coef": 0.003,
+        "entropy_coef": 0.008,
         "learning_rate": 3e-4,
         "schedule": "adaptive",
         "desired_kl": 0.01,
@@ -20,9 +20,8 @@ TRAIN_CFG = {
         "activation": "elu",
         "obs_normalization": True,
         "distribution_cfg": {
-            "class_name": "GaussianDistribution",
-            "init_std": 0.3,
-            "std_type": "scalar",
+            "class_name": "BetaDistribution",
+            "action_range": (-1.0, 1.0),
         },
     },
     "critic": {
@@ -33,7 +32,7 @@ TRAIN_CFG = {
     },
     "amp": {
         # "motion_dir": "data/motions",
-        "motion_dir": "data/motions_walk",
+        "motion_dir": "data/motions_walk_250",
         "body_names": [
             "pelvis", "torso_link",
             "left_hip_yaw_link", "left_knee_link", "left_ankle_pitch_link",
@@ -44,16 +43,16 @@ TRAIN_CFG = {
         "anchor_name": "pelvis", 
         "amp_obs_dim": 210,  # 14 * 15 = 210  14个关节，每个关节15维
         "amp_reward_coef": 1.0,    
-        "task_reward_lerp": 0.2,
-        "disc_learning_rate": 5e-5,
+        "task_reward_lerp": 0.0,
+        "disc_learning_rate": 1e-5,
         "disc_hidden_dims": (128, 64),
         "replay_buffer_size": 1_000_000,
         "disc_batch_size": 512,
         "disc_updates_per_iter": 1,
-        "reset_from_ref_prob": 0.8, # 环境 reset 时，有 80% 的概率从参考动作的某一帧开始，而不是从默认站姿开始。
+        "reset_from_ref_prob": 1, # 环境 reset 时，有 80% 的概率从参考动作的某一帧开始，而不是从默认站姿开始。
     },
-        "use_ref_command": True,
         "obs_groups": {"actor": ["policy"], "critic": ["critic"]},
+        "use_ref_command": True,
         "num_steps_per_env": 24,
         "save_interval": 200,
         "logger": "tensorboard",

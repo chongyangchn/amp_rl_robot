@@ -23,7 +23,8 @@ def load_root_state(motion):
 
 env = G1Env("my_amp/envs/unitree_g1/scene.xml")
 # motion = np.load("data/motions/sfu_walking001.npz")
-motion = np.load("data/motions/walk_backward_loop_001__A022.npz")
+# motion = np.load("data/motions_walk_250/walk_forward_loop_002__A024_250.npz")
+motion = np.load("data/motions_walk/walk_forward_loop_002__A024.npz")
 
 root_pos, root_quat, root_lin_vel, root_ang_vel = load_root_state(motion)
 

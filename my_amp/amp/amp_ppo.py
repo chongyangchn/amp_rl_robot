@@ -10,6 +10,11 @@ class AMPPPO:
         self.device = device
         self.amp_cfg = amp_cfg
 
+        self.last_disc_loss = 0.0
+        self.last_disc_acc = 0.0
+        self.last_expert_logit = 0.0
+        self.last_policy_logit = 0.0
+
         self.disc_optimizer = torch.optim.Adam(
             self.discriminator.parameters(),
             lr=amp_cfg["disc_learning_rate"],
@@ -41,13 +46,23 @@ class AMPPPO:
             next_amp_term,
             rewards,
         )
-
+        # style_reward = self.discriminator.amp_reward_coef * torch.sigmoid(d).squeeze(-1)
+        style_reward = self.discriminator.amp_reward_coef * torch.clamp(
+            1.0 - 0.25 * (d - 1.0).square(),
+            min=0.0,
+        ).squeeze(-1)
         # 策略 transition 存进回放缓冲（负样本）
         self.replay_buffer.insert(self._prev_amp_obs, next_amp_term)
         self._prev_amp_obs = next_amp.clone()
 
         # 交给普通 PPO 存 rollout、更新 normalizer
         self.ppo.process_env_step(obs, final_reward, dones, extras)
+
+        return {
+            "style_reward": style_reward,
+            "final_reward": final_reward,
+            "policy_logit": d,
+        }
 
     def compute_returns(self, obs):
         self.ppo.compute_returns(obs)
@@ -57,6 +72,9 @@ class AMPPPO:
         return self.ppo.update()
 
     def update_discriminator(self):
+        
+
+
         if self.replay_buffer.size < self.disc_batch_size:
             return
 
@@ -64,6 +82,8 @@ class AMPPPO:
         mse = nn.MSELoss()
         total_loss = 0.0
         total_acc = 0.0
+        total_expert_logit = 0.0
+        total_policy_logit = 0.0
 
         for _ in range(self.disc_updates):
             e_s, e_n = self.amp_loader.sample_batch(self.disc_batch_size)
@@ -76,6 +96,9 @@ class AMPPPO:
 
             d_e = self.discriminator(torch.cat([e_s, e_n], dim=-1))
             d_p = self.discriminator(torch.cat([p_s, p_n], dim=-1))
+
+            total_expert_logit += d_e.detach().mean().item()
+            total_policy_logit += d_p.detach().mean().item()
 
             expert_loss = mse(d_e, torch.ones_like(d_e))
             policy_loss = mse(d_p, -1.0 * torch.ones_like(d_p))
@@ -93,6 +116,8 @@ class AMPPPO:
 
         self.last_disc_loss = total_loss / self.disc_updates
         self.last_disc_acc = total_acc / self.disc_updates
+        self.last_expert_logit = total_expert_logit / self.disc_updates
+        self.last_policy_logit = total_policy_logit / self.disc_updates
 
     def train_mode(self):
         self.ppo.train_mode()

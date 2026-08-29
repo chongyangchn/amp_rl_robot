@@ -20,9 +20,14 @@ data/motions/*
 !data/motions/.gitkeep
 data/motions_sfu/
 data/motions_walk/
+data/motions_walk_250/
 data/sfu_raw/
 data/smplx/
 data/smplx_patched/
+
+# Presentations and Office temp files
+*.pptx
+~$*
 
 # Editors and OS
 .vscode/

@@ -56,10 +56,10 @@ class Discriminator(nn.Module):
             self.eval()
             x = torch.cat([state, next_state], dim=-1)
             d = self.net(x)
-            # style_reward = self.amp_reward_coef * torch.clamp(
-            #     1 - 0.25 * (d - 1).square(), min=0.0
-            # )
-            style_reward = self.amp_reward_coef * torch.sigmoid(d)
+            style_reward = self.amp_reward_coef * torch.clamp(
+                1 - 0.25 * (d - 1).square(), min=0.0
+            )
+            # style_reward = self.amp_reward_coef * torch.sigmoid(d)
             if self.task_reward_lerp > 0:
                 reward = (1 - self.task_reward_lerp) * style_reward \
                        + self.task_reward_lerp * task_reward.unsqueeze(-1)

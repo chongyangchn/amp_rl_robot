@@ -1,6 +1,7 @@
 import os
 os.environ["KMP_DUPLICATE_LIB_OK"] = "TRUE"
 
+import copy
 import time
 import torch
 import mujoco
@@ -9,23 +10,28 @@ import mujoco.viewer
 from rsl_rl.algorithms import PPO
 from my_amp.envs.vec_env import G1VecEnv
 from my_amp.configs.train_cfg import TRAIN_CFG
+from my_amp.motion.motion_loader import MotionLoader
 
 
 def main():
     device = "cuda:0" if torch.cuda.is_available() else "cpu"
 
-    checkpoint_path = "logs/amp_baseline/model_1999.pt"
+    checkpoint_path = "logs/amp_baseline/model_1800.pt"
+    cfg = copy.deepcopy(TRAIN_CFG)
+    motion_loader = MotionLoader(cfg["amp"]["motion_dir"])
 
     # 创建单环境
     env = G1VecEnv(
         num_envs=1,
-        amp_body_names=TRAIN_CFG["amp"]["body_names"],
-        amp_anchor_name=TRAIN_CFG["amp"]["anchor_name"],
+        amp_body_names=cfg["amp"]["body_names"],
+        amp_anchor_name=cfg["amp"]["anchor_name"],
+        motion_loader=motion_loader,
+        reset_from_ref_prob=1.0,
     )
 
     # 构建和训练时一样的 PPO
     obs = env.get_observations().to(device)
-    ppo = PPO.construct_algorithm(obs, env, TRAIN_CFG, device)
+    ppo = PPO.construct_algorithm(obs, env, cfg, device)
 
     # 加载训练好的 actor
     ckpt = torch.load(checkpoint_path, map_location=device)
@@ -39,7 +45,7 @@ def main():
         viewer.cam.azimuth = 90
         viewer.cam.elevation = -15
 
-        obs = env.get_observations().to(device)
+        obs = env.reset_all_to_ref().to(device)
 
         while viewer.is_running():
             with torch.no_grad():

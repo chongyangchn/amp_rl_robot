@@ -98,7 +98,7 @@ class G1Env:
         self.prev_action = np.zeros(self.model.nu, dtype=np.float32)
 
         # 目标高度（XML 里 pelvis 在 0.793，加一点作为站立高度）
-        self.target_height = 0.82
+        self.target_height = 0.77
 
         # 速度指令（训练循环里可以重置它）
         self.command = np.array([0.2, 0.0], dtype=np.float32)   # [前向速度, 转向速度]
@@ -161,7 +161,13 @@ class G1Env:
         local_ang_vel = rot.T @ self.data.qvel[3:6]                         # 3  基座局部角速度（滚转/俯仰/偏航）
         projected_gravity = rot.T @ np.array([0.0, 0.0, -1.0])              # 3  投影重力（躯干坐标系下的重力方向）
         cmd = self.command                                                  # 2  速度指令（前向速度 + 转向速度）
-        joint_pos_delta = self.data.qpos[7:] - self.default_joint_pos       # 29 关节位置（相对默认位置的偏移）
+        # joint_pos_delta = self.data.qpos[7:] - self.default_joint_pos       # 29 关节位置（相对默认位置的偏移）
+        
+        joint_pos_norm = (
+            2.0 * (self.data.qpos[7:] - self.joint_low)
+            / (self.joint_high - self.joint_low)
+            - 1.0
+        )
         joint_vel = self.data.qvel[6:] * 0.05                               # 29 关节速度（缩放到合理范围）
         prev_act = self.prev_action                                         # 29 上一步的动作（平滑过渡用）
         foot_contact = self._get_foot_contacts()                            # 2  左右脚是否着地
@@ -179,7 +185,7 @@ class G1Env:
             local_ang_vel,        # 3
             projected_gravity,    # 3
             cmd,                  # 2
-            joint_pos_delta,      # 29
+            joint_pos_norm,      # 29
             joint_vel,            # 29
             prev_act,                  # 29
             foot_contact,         # 2
@@ -239,7 +245,8 @@ class G1Env:
     # 环境交互
     def step(self, action):
         action = np.clip(action, -1.0, 1.0)
-        self.data.ctrl[:] = self.default_joint_pos + action * self.action_scale # 将动作值映射到mujoco定义的范围内
+        target = self.joint_low + (action + 1.0) * 0.5 * (self.joint_high - self.joint_low)
+        self.data.ctrl[:] = np.clip(target, self.joint_low, self.joint_high) # 将动作值映射到mujoco定义的范围内
 
         for _ in range(self.action_repeat):
             mujoco.mj_step(self.model, self.data)
@@ -302,7 +309,9 @@ class G1Env:
         ref_joint_pos = qpos[7:]
 
         self.prev_action = np.clip(
-            (ref_joint_pos - self.default_joint_pos) / self.action_scale,
+            2.0 * (ref_joint_pos - self.joint_low)
+            / (self.joint_high - self.joint_low)
+            - 1.0,
             -1.0,
             1.0,
         )
