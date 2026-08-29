@@ -24,7 +24,7 @@ def main():
     runner = AMPRunner(
         env,
         TRAIN_CFG,
-        log_dir="logs/amp_baseline",
+        log_dir="logs/amp_v3_contact",
         device=device,
     )
     runner.learn(TRAIN_CFG["max_iterations"])

@@ -282,12 +282,15 @@ class G1Env:
         upright_err = np.sum(projected_gravity[:2] ** 2)
         height_err = (self.data.qpos[2] - self.target_height) ** 2
         action_rate = np.mean((action - self.prev_action) ** 2)
+        foot_contact = self._get_foot_contacts()
+        contact_reward = float(np.mean(foot_contact))
 
         total_reward = (
             + 6.0 * track_lin_reward
             + 3.0 * track_ang_reward
             + 0.5 * np.exp(-upright_err / 0.05)
             + 0.5 * np.exp(-height_err / 0.01)
+            + 0.5 * contact_reward
             + 0.1
             - 0.02 * action_rate
         )
