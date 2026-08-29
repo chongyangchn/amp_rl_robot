@@ -16,7 +16,7 @@ TRAIN_CFG = {
     },
     "actor": {
         "class_name": "MLPModel",
-        "hidden_dims": (256, 128, 64),
+        "hidden_dims": (512, 256, 128),
         "activation": "elu",
         "obs_normalization": True,
         "distribution_cfg": {
@@ -26,7 +26,7 @@ TRAIN_CFG = {
     },
     "critic": {
         "class_name": "MLPModel",
-        "hidden_dims": (256, 128, 64),
+        "hidden_dims": (512, 256, 128),
         "activation": "elu",
         "obs_normalization": True,
     },
@@ -42,8 +42,8 @@ TRAIN_CFG = {
         ],
         "anchor_name": "pelvis", 
         "amp_obs_dim": 210,  # 14 * 15 = 210  14个关节，每个关节15维
-        "amp_reward_coef": 1.0,    
-        "task_reward_lerp": 0.1,
+        "amp_reward_coef": 0.1,    
+        "task_reward_lerp": 0.5,
         "disc_learning_rate": 5e-6,
         "disc_hidden_dims": (128, 64),
         "replay_buffer_size": 1_000_000,

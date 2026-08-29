@@ -2,6 +2,8 @@ import mujoco
 import numpy as np
 import torch
 from my_amp.amp.amp_obs import compute_amp_features
+from my_amp.envs.g1_reward import compute_task_reward
+from my_amp.envs.g1_obs import get_policy_obs, get_critic_obs
 
 
 
@@ -92,13 +94,23 @@ class G1Env:
         self._right_foot_body = self.model.site_bodyid[self.right_foot_site]
 
         # 默认关节位置（reset 时用到）
+        # self.default_joint_pos = self.data.qpos[7:].copy()
+        stand_key_id = mujoco.mj_name2id(
+            self.model, mujoco.mjtObj.mjOBJ_KEY, "stand"
+        )
+        mujoco.mj_resetDataKeyframe(self.model, self.data, stand_key_id)
+        mujoco.mj_forward(self.model, self.data)
+
         self.default_joint_pos = self.data.qpos[7:].copy()
+        self.action_scale = 0.25
+        ## 0829 改动作中心必须是站立姿态，不能是 qpos 全零
 
         # 上一步动作缓存
         self.prev_action = np.zeros(self.model.nu, dtype=np.float32)
 
         # 目标高度（XML 里 pelvis 在 0.793，加一点作为站立高度）
         self.target_height = 0.77
+        self.default_root_height = self.data.qpos[2]
 
         # 速度指令（训练循环里可以重置它）
         self.command = np.array([0.2, 0.0], dtype=np.float32)   # [前向速度, 转向速度]
@@ -197,10 +209,9 @@ class G1Env:
         return obs
 
     def get_obs_vec(self):
-        obs = self._get_obs()
         return {
-            "policy" : obs, # (policy_dim,)
-            "critic" : obs, # 第一步先和 policy 一样
+            "policy": get_policy_obs(self),
+            "critic": get_critic_obs(self),
             "amp": self.get_amp_obs(self.amp_body_idx, self.amp_anchor_idx),
         }
     
@@ -225,10 +236,19 @@ class G1Env:
     def reset(self):
         """重置仿真状态"""
         # 1. 物理重置
-        mujoco.mj_resetData(self.model, self.data)
+        stand_key_id = mujoco.mj_name2id(
+            self.model, mujoco.mjtObj.mjOBJ_KEY, "stand"
+        )
+        mujoco.mj_resetDataKeyframe(self.model, self.data, stand_key_id)
         mujoco.mj_forward(self.model, self.data)
 
-        self.prev_action.fill(0.0)
+        self.prev_action = np.clip(
+            (self.data.qpos[7:] - self.default_joint_pos) / self.action_scale,
+            -1.0,
+            1.0,
+        )
+
+
         self.step_count = 0                         # ← 加这行
 
         # ── 随机化速度指令（提升泛化性） ──
@@ -244,9 +264,13 @@ class G1Env:
 
     # 环境交互
     def step(self, action):
+        # action = np.clip(action, -1.0, 1.0)
+        # target = self.joint_low + (action + 1.0) * 0.5 * (self.joint_high - self.joint_low)
+        # self.data.ctrl[:] = np.clip(target, self.joint_low, self.joint_high) # 将动作值映射到mujoco定义的范围内
+
         action = np.clip(action, -1.0, 1.0)
-        target = self.joint_low + (action + 1.0) * 0.5 * (self.joint_high - self.joint_low)
-        self.data.ctrl[:] = np.clip(target, self.joint_low, self.joint_high) # 将动作值映射到mujoco定义的范围内
+        target = self.default_joint_pos + action * self.action_scale
+        self.data.ctrl[:] = np.clip(target, self.joint_low, self.joint_high)
 
         for _ in range(self.action_repeat):
             mujoco.mj_step(self.model, self.data)
@@ -266,35 +290,7 @@ class G1Env:
         return self.get_obs_vec(), reward, is_done, info
 
     def _caculate_reward(self, action):
-        sigma = 0.25
-        rot = self._cached_rot
-
-        local_lin_vel = rot.T @ self.data.qvel[:3]
-        local_ang_vel = rot.T @ self.data.qvel[3:6]
-
-        lin_vel_error = float((self.command[0] - local_lin_vel[0]) ** 2)
-        ang_vel_error = float((self.command[1] - local_ang_vel[2]) ** 2)
-
-        track_lin_reward = np.exp(-lin_vel_error / sigma ** 2)
-        track_ang_reward = np.exp(-ang_vel_error / sigma ** 2)
-
-        projected_gravity = rot.T @ np.array([0.0, 0.0, -1.0])
-        upright_err = np.sum(projected_gravity[:2] ** 2)
-        height_err = (self.data.qpos[2] - self.target_height) ** 2
-        action_rate = np.mean((action - self.prev_action) ** 2)
-        foot_contact = self._get_foot_contacts()
-        contact_reward = float(np.mean(foot_contact))
-
-        total_reward = (
-            + 6.0 * track_lin_reward
-            + 3.0 * track_ang_reward
-            + 0.5 * np.exp(-upright_err / 0.05)
-            + 0.5 * np.exp(-height_err / 0.01)
-            + 0.5 * contact_reward
-            + 0.1
-            - 0.02 * action_rate
-        )
-        return total_reward * 0.05
+        return compute_task_reward(self, action)
 
     def reset_to_ref(self, qpos, qvel=None, command=None):
         mujoco.mj_resetData(self.model, self.data)

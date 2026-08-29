@@ -29,6 +29,10 @@ data/smplx_patched/
 *.pptx
 ~$*
 
+# Local MuJoCo export/debug files
+MJDATA.TXT
+mjmodel.xml
+
 # Editors and OS
 .vscode/
 .idea/

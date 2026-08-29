@@ -16,7 +16,9 @@ from my_amp.motion.motion_loader import MotionLoader
 def main():
     device = "cuda:0" if torch.cuda.is_available() else "cpu"
 
-    checkpoint_path = "logs/amp_baseline/model_1800.pt"
+    # checkpoint_path = "logs/amp_rsl_v1/model_2000.pt"
+    checkpoint_path = "logs/amp_rsl_beta/model_1000.pt"
+    
     cfg = copy.deepcopy(TRAIN_CFG)
     motion_loader = MotionLoader(cfg["amp"]["motion_dir"])
 
