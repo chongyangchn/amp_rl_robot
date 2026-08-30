@@ -1,6 +1,12 @@
 -e .
 -e ./rsl_rl
-mujoco
+
+torch>=2.0.0
+numpy>=1.24
+mujoco>=3.0.0
+scipy>=1.10
+smplx>=0.1.28
 tensordict>=0.7.0
-tensorboard
-scipy
+tensorboard>=2.10
+tqdm>=4.60
+pyyaml>=6.0

@@ -4,6 +4,8 @@ import torch
 from my_amp.amp.amp_obs import compute_amp_features
 from my_amp.envs.g1_reward import compute_task_reward
 from my_amp.envs.g1_obs import get_policy_obs, get_critic_obs
+from my_amp.envs.g1_terminations import check_termination
+from my_amp.envs.g1_events import resample_command, resample_command_from_ref
 
 
 
@@ -100,6 +102,8 @@ class G1Env:
         )
         mujoco.mj_resetDataKeyframe(self.model, self.data, stand_key_id)
         mujoco.mj_forward(self.model, self.data)
+        self.data.qvel[:3] += np.random.uniform(-0.2, 0.2, size=3)
+        self.data.qvel[3:6] += np.random.uniform(-0.2, 0.2, size=3)
 
         self.default_joint_pos = self.data.qpos[7:].copy()
         self.action_scale = 0.25
@@ -111,6 +115,8 @@ class G1Env:
         # 目标高度（XML 里 pelvis 在 0.793，加一点作为站立高度）
         self.target_height = 0.77
         self.default_root_height = self.data.qpos[2]
+        self.command_lin_range = (-0.2, 0.6)
+        self.command_yaw_range = (-0.5, 0.5)
 
         # 速度指令（训练循环里可以重置它）
         self.command = np.array([0.2, 0.0], dtype=np.float32)   # [前向速度, 转向速度]
@@ -233,6 +239,9 @@ class G1Env:
     # def 
 
     # 环境重置
+    def _is_done(self):
+        return check_termination(self)
+
     def reset(self):
         """重置仿真状态"""
         # 1. 物理重置
@@ -256,7 +265,7 @@ class G1Env:
         #     np.random.uniform(0.2, 0.6),  # 前向速度 0.2~0.6 m/s
         #     np.random.uniform(-0.5, 0.5), # 转向速度 -0.5~0.5 rad/s
         # ])
-        self.command = np.array([0.0, 0.0])
+        resample_command(self)
          
         # return self._get_obs()
         return self.get_obs_vec()
@@ -268,7 +277,8 @@ class G1Env:
         # target = self.joint_low + (action + 1.0) * 0.5 * (self.joint_high - self.joint_low)
         # self.data.ctrl[:] = np.clip(target, self.joint_low, self.joint_high) # 将动作值映射到mujoco定义的范围内
 
-        action = np.clip(action, -1.0, 1.0)
+        raw_action = np.asarray(action, dtype=np.float32)
+        action = np.clip(raw_action, -1.0, 1.0)
         target = self.default_joint_pos + action * self.action_scale
         self.data.ctrl[:] = np.clip(target, self.joint_low, self.joint_high)
 
@@ -278,9 +288,12 @@ class G1Env:
         # obs = self._get_obs()
         # 关键：reward 前刷新当前姿态
         self._cached_rot = quat_to_rotmat(self.data.qpos[3:7])
-        reward = self._caculate_reward(action)
-        is_done = self._is_done()
-        info = {}
+        reward, reward_terms = self._caculate_reward(raw_action)
+        is_done, termination = self._is_done()
+        info = {
+            "rewards": reward_terms,
+            "termination": termination,
+        }
 
 
         self.prev_action = action.copy() 
@@ -303,22 +316,25 @@ class G1Env:
         else:
             self.data.qvel[:] = 0.0
 
+        self.data.qpos[7:] += np.random.normal(0.0, 0.015, size=self.num_joints)
+        self.data.qvel[:3] += np.random.normal(0.0, 0.05, size=3)
+        self.data.qvel[3:6] += np.random.normal(0.0, 0.05, size=3)
+        self.data.qvel[6:] += np.random.normal(0.0, 0.1, size=self.num_joints)
+
         mujoco.mj_forward(self.model, self.data)
 
         ref_joint_pos = qpos[7:]
 
         self.prev_action = np.clip(
-            2.0 * (ref_joint_pos - self.joint_low)
-            / (self.joint_high - self.joint_low)
-            - 1.0,
+            (ref_joint_pos - self.default_joint_pos) / self.action_scale,
             -1.0,
             1.0,
         )
         self.step_count = 0
         if command is None:
-            self.command = np.array([0.0, 0.0], dtype=np.float32)
+            resample_command(self)
         else:
-            self.command = np.array(command, dtype=np.float32)
+            resample_command_from_ref(self, command)
 
         return self.get_obs_vec()
 

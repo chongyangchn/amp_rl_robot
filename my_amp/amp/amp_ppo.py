@@ -72,9 +72,6 @@ class AMPPPO:
         return self.ppo.update()
 
     def update_discriminator(self):
-        
-
-
         if self.replay_buffer.size < self.disc_batch_size:
             return
 

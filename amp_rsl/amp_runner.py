@@ -11,6 +11,7 @@ from amp_rsl.amp_ppo import AMPPPO
 from amp_rsl.discriminator import AMPDiscriminator
 from amp_rsl.replay_buffer import AMPReplayBuffer
 from amp_rsl.motion_loader import AMPLoader
+from amp_rsl.normalizer import AMPNormalizer
 
 
 class AMPRunner:
@@ -42,6 +43,21 @@ class AMPRunner:
             all_body_names,
         )
 
+        self.amp_normalizer = AMPNormalizer(
+            self.amp_cfg["amp_obs_dim"],
+            device=self.device,
+        )
+        for _ in range(20):
+            reference_s, reference_s_next = self.amp_loader.sample_batch(512)
+            reference_batch = torch.cat(
+                [
+                    torch.from_numpy(reference_s),
+                    torch.from_numpy(reference_s_next),
+                ],
+                dim=0,
+            ).float().to(self.device)
+            self.amp_normalizer.update(reference_batch)
+
         self.replay_buffer = AMPReplayBuffer(
             self.amp_cfg["replay_buffer_size"],
             self.amp_cfg["amp_obs_dim"],
@@ -53,6 +69,7 @@ class AMPRunner:
             self.discriminator,
             self.amp_loader,
             self.replay_buffer,
+            self.amp_normalizer,
             self.amp_cfg,
             self.device,
         )
@@ -64,7 +81,9 @@ class AMPRunner:
         obs = self.env.reset_all_to_ref().to(self.device)
         self.alg.train_mode()
         # Pre-fill AMP replay buffer before discriminator update.
-        for _ in range(200):
+        prefill_transitions = self.amp_cfg.get("amp_num_preload_transitions", 65536)
+        prefill_steps = (prefill_transitions + self.env.num_envs - 1) // self.env.num_envs
+        for _ in range(prefill_steps):
             actions = self.alg.act(obs)
 
             obs, rewards, dones, extras = self.env.step(
@@ -88,6 +107,8 @@ class AMPRunner:
             final_rewards = []
             task_rewards = []
             action_list = []
+            reward_term_sums = {}
+            termination_sums = {}
             done_count = 0
             done_lengths = []
 
@@ -106,6 +127,13 @@ class AMPRunner:
 
                     step_metrics = self.alg.process_env_step(obs, rewards, dones, extras)
 
+                    for term_dict in extras.get("reward_terms", []):
+                        for key, value in term_dict.items():
+                            reward_term_sums[key] = reward_term_sums.get(key, 0.0) + float(value)
+
+                    for reason, count in extras.get("termination_reasons", {}).items():
+                        termination_sums[reason] = termination_sums.get(reason, 0) + count
+
                     task_rewards.append(rewards.mean().item())
                     style_rewards.append(step_metrics["style_reward"].mean().item())
                     final_rewards.append(step_metrics["final_reward"].mean().item())
@@ -121,6 +149,7 @@ class AMPRunner:
                 self.alg.compute_returns(obs)
 
             loss_dict = self.alg.update()
+            self.current_learning_iteration = it
 
             actions_t = torch.cat(action_list, dim=0)
             total_steps = self.cfg["num_steps_per_env"] * self.env.num_envs
@@ -149,6 +178,13 @@ class AMPRunner:
             for key, value in loss_dict.items():
                 metrics[f"Loss/{key}"] = value
 
+            reward_steps = self.cfg["num_steps_per_env"] * self.env.num_envs
+            for name, value in reward_term_sums.items():
+                metrics[f"Reward/{name}"] = value / reward_steps
+
+            for name, value in termination_sums.items():
+                metrics[f"Termination/{name}"] = value
+
             if self.writer is not None:
                 for key, value in metrics.items():
                     self.writer.add_scalar(key, value, it)
@@ -170,4 +206,5 @@ class AMPRunner:
         state["iter"] = self.current_learning_iteration
         state["discriminator_state_dict"] = self.discriminator.state_dict()
         state["disc_optimizer_state_dict"] = self.alg.disc_optimizer.state_dict()
+        state["amp_normalizer_state_dict"] = self.amp_normalizer.state_dict()
         torch.save(state, path)

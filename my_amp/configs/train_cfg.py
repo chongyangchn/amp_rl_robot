@@ -1,4 +1,5 @@
 TRAIN_CFG = {
+    "max_episode_length": 5000,
     "algorithm": {
         "class_name": "PPO",
         "rnd_cfg": None,               # 必须有
@@ -8,8 +9,8 @@ TRAIN_CFG = {
         "gamma": 0.99,
         "lam": 0.95,
         "value_loss_coef": 1.0,
-        "entropy_coef": 0.01,
-        "learning_rate": 3e-4,
+        "entropy_coef": 0.005,
+        "learning_rate": 1e-3,
         "schedule": "adaptive",
         "desired_kl": 0.01,
         "max_grad_norm": 1.0,
@@ -20,8 +21,10 @@ TRAIN_CFG = {
         "activation": "elu",
         "obs_normalization": True,
         "distribution_cfg": {
-            "class_name": "BetaDistribution",
-            "action_range": (-1.0, 1.0),
+            "class_name": "GaussianDistribution",
+            "init_std": 1.0,
+            "std_type": "scalar",
+            "std_range": [0.05, 0.5],
         },
     },
     "critic": {
@@ -42,14 +45,16 @@ TRAIN_CFG = {
         ],
         "anchor_name": "pelvis", 
         "amp_obs_dim": 210,  # 14 * 15 = 210  14个关节，每个关节15维
-        "amp_reward_coef": 0.1,    
-        "task_reward_lerp": 0.5,
-        "disc_learning_rate": 5e-6,
-        "disc_hidden_dims": (128, 64),
+        "amp_reward_coef": 0.5,    
+        "task_reward_lerp": 0.70,
+        "disc_learning_rate": 2e-5,
+        "disc_hidden_dims": (256, 128),
         "replay_buffer_size": 1_000_000,
         "disc_batch_size": 512,
         "disc_updates_per_iter": 1,
-        "reset_from_ref_prob": 1, # 环境 reset 时，有 80% 的概率从参考动作的某一帧开始，而不是从默认站姿开始。
+        "min_normalized_std": [0.05] * 29,
+        "amp_num_preload_transitions": 65536,
+        "reset_from_ref_prob": 0.6, # 环境 reset 时，有 80% 的概率从参考动作的某一帧开始，而不是从默认站姿开始。
     },
         "obs_groups": {"actor": ["policy"], "critic": ["critic"]},
         "use_ref_command": True,
@@ -62,7 +67,7 @@ TRAIN_CFG = {
         "multi_gpu": None,
 
     "motion": {
-        "motion_dir": "data/motions",
+        "motion_dir": "data/motions_walk_250",
         "reset_from_ref_prob": 0.8,
         "use_ref_command": True,
     }

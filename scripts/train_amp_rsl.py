@@ -16,9 +16,11 @@ def main():
     cfg = copy.deepcopy(TRAIN_CFG)
 
     motion_loader = MotionLoader(cfg["amp"]["motion_dir"])
+    print(f"Motion loader loaded {motion_loader} motions from {cfg['amp']['motion_dir']}")
 
     env = G1VecEnv(
         num_envs=cfg["num_envs"],
+        max_episode_length=cfg["max_episode_length"],
         amp_body_names=cfg["amp"]["body_names"],
         amp_anchor_name=cfg["amp"]["anchor_name"],
         motion_loader=motion_loader,
@@ -28,7 +30,7 @@ def main():
     runner = AMPRunner(
         env,
         cfg,
-        log_dir="logs/amp_rsl_beta",
+        log_dir="logs/amp_rsl_beta_v2",
         device=device,
     )
 

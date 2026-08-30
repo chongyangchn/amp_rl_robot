@@ -6,17 +6,28 @@ from amp_rsl.amp_reward import style_reward_from_logit, mix_amp_reward
 
 
 class AMPPPO:
-    def __init__(self, ppo: PPO, discriminator, amp_loader, replay_buffer, amp_cfg, device):
+    def __init__(
+        self,
+        ppo: PPO,
+        discriminator,
+        amp_loader,
+        replay_buffer,
+        amp_normalizer,
+        amp_cfg,
+        device,
+    ):
         self.ppo = ppo
         self.discriminator = discriminator.to(device)
         self.amp_loader = amp_loader
         self.replay_buffer = replay_buffer
+        self.amp_normalizer = amp_normalizer
         self.amp_cfg = amp_cfg
         self.device = device
 
         self.disc_optimizer = torch.optim.Adam(
             self.discriminator.parameters(),
             lr=amp_cfg["disc_learning_rate"],
+            weight_decay=amp_cfg.get("disc_weight_decay", 1e-4),
         )
 
         self.disc_batch_size = amp_cfg["disc_batch_size"]
@@ -40,7 +51,10 @@ class AMPPPO:
         next_amp_term = next_amp.clone()
         next_amp_term[terminal] = self._prev_amp_obs[terminal]
 
-        d = self.discriminator.logits(self._prev_amp_obs, next_amp_term)
+        prev_amp_norm = self.amp_normalizer.normalize(self._prev_amp_obs)
+        next_amp_norm = self.amp_normalizer.normalize(next_amp_term)
+
+        d = self.discriminator.logits(prev_amp_norm, next_amp_norm)
         style_reward = style_reward_from_logit(
             d,
             self.amp_cfg["amp_reward_coef"],
@@ -67,7 +81,33 @@ class AMPPPO:
 
     def update(self):
         self.update_discriminator()
-        return self.ppo.update()
+        loss_dict = self.ppo.update()
+        self._apply_min_std()
+        return loss_dict
+
+    def _apply_min_std(self):
+        min_std_values = self.amp_cfg.get("min_normalized_std")
+        if not min_std_values:
+            return
+
+        distribution = getattr(self.ppo.actor, "distribution", None)
+        if distribution is None:
+            return
+
+        min_std = torch.as_tensor(
+            min_std_values,
+            device=self.device,
+            dtype=torch.float32,
+        )
+        if min_std.numel() == 1:
+            min_std = min_std.expand_as(distribution.std_param)
+
+        if hasattr(distribution, "std_param"):
+            with torch.no_grad():
+                distribution.std_param.clamp_min_(min_std)
+        elif hasattr(distribution, "log_std_param"):
+            with torch.no_grad():
+                distribution.log_std_param.clamp_min_(torch.log(min_std.clamp_min(1e-6)))
 
     def update_discriminator(self):
         if self.replay_buffer.size < self.disc_batch_size:
@@ -87,20 +127,32 @@ class AMPPPO:
 
             e_s = torch.from_numpy(e_s).float().to(self.device)
             e_n = torch.from_numpy(e_n).float().to(self.device)
+            e_s = e_s + torch.randn_like(e_s) * 0.01
+            e_n = e_n + torch.randn_like(e_n) * 0.01
             p_s = p_s.float().to(self.device)
             p_n = p_n.float().to(self.device)
+
+            self.amp_normalizer.update(torch.cat([p_s, e_s], dim=0))
+
+            e_s = self.amp_normalizer.normalize(e_s)
+            e_n = self.amp_normalizer.normalize(e_n)
+            p_s = self.amp_normalizer.normalize(p_s)
+            p_n = self.amp_normalizer.normalize(p_n)
 
             d_e = self.discriminator.logits(e_s, e_n)
             d_p = self.discriminator.logits(p_s, p_n)
 
-            expert_loss = mse(d_e, torch.ones_like(d_e))
-            policy_loss = mse(d_p, -torch.ones_like(d_p))
+            expert_loss = mse(d_e, 0.9 * torch.ones_like(d_e))
+            policy_loss = mse(d_p, -0.9 * torch.ones_like(d_p))
             amp_loss = 0.5 * (expert_loss + policy_loss)
             grad_pen = self.discriminator.compute_gradient_penalty(e_s, e_n)
             loss = amp_loss + grad_pen
 
             self.disc_optimizer.zero_grad()
             loss.backward()
+            torch.nn.utils.clip_grad_norm_(
+                self.discriminator.parameters(), max_norm=1.0
+            )
             self.disc_optimizer.step()
 
             total_loss += loss.item()

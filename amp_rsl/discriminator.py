@@ -15,12 +15,12 @@ class AMPDiscriminator(nn.Module):
             prev = h
         layers.append(nn.Linear(prev, 1))
 
-        self.net = nn.Sequential(*layers)\
+        self.net = nn.Sequential(*layers)
 
     def forward(self, x):
         return self.net(x)
 
-    def compute_gradient_penalty(self, expert_state, expert_next_state, lambda_=10.0):
+    def compute_gradient_penalty(self, expert_state, expert_next_state, lambda_=20.0):
         expert_data = torch.cat([expert_state, expert_next_state], dim=-1)
         expert_data.requires_grad_(True)
 

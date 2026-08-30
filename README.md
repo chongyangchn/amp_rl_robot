@@ -54,3 +54,19 @@ pip install -e ./rsl_rl -i https://pypi.tuna.tsinghua.edu.cn/simple
 
 # 冒烟测试代码
 $env:KMP_DUPLICATE_LIB_OK="TRUE"
+
+# 云端代码训练
+
+# 激活环境：
+conda activate amp
+
+# 运行代码
+cd ~/cy_amp/amp_rl_robot
+PYTHONPATH=. python scripts/train_amp_rsl.py
+
+
+ tensorboard --logdir logs   
+
+
+ 云服务器训练后进行视频保存
+ PYTHONPATH=. xvfb-run -a python scripts/eval_amp_headless.py

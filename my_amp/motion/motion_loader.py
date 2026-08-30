@@ -47,7 +47,9 @@ class MotionLoader:
         R = quat_to_rotmat(root_quat)
         local_lin_vel = R.T @ root_lin_vel
         local_ang_vel = R.T @ root_ang_vel
-        command = np.array([local_lin_vel[0], local_ang_vel[2]], dtype=np.float32)
+        command_x = float(np.clip(local_lin_vel[0], -0.3, 0.8))
+        command_yaw = float(np.clip(local_ang_vel[2], -0.5, 0.5))
+        command = np.array([command_x, command_yaw], dtype=np.float32)
 
         qpos = np.zeros(36, dtype=np.float64)
         qpos[:3] = root_pos
