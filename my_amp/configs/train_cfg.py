@@ -53,7 +53,7 @@ TRAIN_CFG = {
         "disc_batch_size": 512,
         "disc_updates_per_iter": 1,
         "min_normalized_std": [0.05] * 29,
-        "amp_num_preload_transitions": 65536,
+        "amp_num_preload_transitions": 200000,
         "reset_from_ref_prob": 0.6, # 环境 reset 时，有 80% 的概率从参考动作的某一帧开始，而不是从默认站姿开始。
     },
         "obs_groups": {"actor": ["policy"], "critic": ["critic"]},
