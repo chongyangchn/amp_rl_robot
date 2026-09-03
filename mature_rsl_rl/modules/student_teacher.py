@@ -22,7 +22,7 @@ import torch
 import torch.nn as nn
 from torch.distributions import Normal
 
-from rsl_rl.utils import resolve_nn_activation
+from mature_rsl_rl.utils import resolve_nn_activation
 
 
 class StudentTeacher(nn.Module):

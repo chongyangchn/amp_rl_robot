@@ -22,8 +22,8 @@ import torch.nn as nn
 import torch.optim as optim
 
 # rsl-rl
-from rsl_rl.modules import StudentTeacher, StudentTeacherRecurrent
-from rsl_rl.storage import RolloutStorage
+from mature_rsl_rl.modules import StudentTeacher, StudentTeacherRecurrent
+from mature_rsl_rl.storage import RolloutStorage
 
 
 class Distillation:

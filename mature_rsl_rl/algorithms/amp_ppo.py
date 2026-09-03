@@ -24,10 +24,10 @@ import torch
 import torch.nn as nn
 import torch.optim as optim
 
-from rsl_rl.modules import ActorCritic
-from rsl_rl.modules.rnd import RandomNetworkDistillation
-from rsl_rl.storage import ReplayBuffer, RolloutStorage
-from rsl_rl.utils import string_to_callable
+from mature_rsl_rl.modules import ActorCritic
+from mature_rsl_rl.modules.rnd import RandomNetworkDistillation
+from mature_rsl_rl.storage import ReplayBuffer, RolloutStorage
+from mature_rsl_rl.utils import string_to_callable
 
 
 class AMPPPO:

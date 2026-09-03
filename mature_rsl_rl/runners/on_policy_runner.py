@@ -25,10 +25,10 @@ from collections import deque
 
 import torch
 
-import rsl_rl
-from rsl_rl.algorithms import PPO, Distillation
-from rsl_rl.env import VecEnv
-from rsl_rl.modules import (
+import mature_rsl_rl
+from mature_rsl_rl.algorithms import PPO, Distillation
+from mature_rsl_rl.env import VecEnv
+from mature_rsl_rl.modules import (
     ActorCritic,
     ActorCriticRecurrent,
     EmpiricalNormalization,
@@ -36,7 +36,7 @@ from rsl_rl.modules import (
     StudentTeacherRecurrent,
     # TransformerActorCritic,
 )
-from rsl_rl.utils import store_code_state
+from mature_rsl_rl.utils import store_code_state
 
 
 def _migrate_train_cfg(train_cfg: dict) -> None:
@@ -211,12 +211,12 @@ class OnPolicyRunner:
             self.logger_type = self.logger_type.lower()
 
             if self.logger_type == "neptune":
-                from rsl_rl.utils.neptune_utils import NeptuneSummaryWriter
+                from mature_rsl_rl.utils.neptune_utils import NeptuneSummaryWriter
 
                 self.writer = NeptuneSummaryWriter(log_dir=self.log_dir, flush_secs=10, cfg=self.cfg)
                 self.writer.log_config(self.env.cfg, self.cfg, self.alg_cfg, self.policy_cfg)
             elif self.logger_type == "wandb":
-                from rsl_rl.utils.wandb_utils import WandbSummaryWriter
+                from mature_rsl_rl.utils.wandb_utils import WandbSummaryWriter
 
                 self.writer = WandbSummaryWriter(log_dir=self.log_dir, flush_secs=10, cfg=self.cfg)
                 self.writer.log_config(self.env.cfg, self.cfg, self.alg_cfg, self.policy_cfg)

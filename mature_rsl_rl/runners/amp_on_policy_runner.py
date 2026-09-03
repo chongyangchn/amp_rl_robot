@@ -25,10 +25,10 @@ from collections import deque
 
 import torch
 
-import rsl_rl
-from rsl_rl.algorithms import AMPPPO
-from rsl_rl.env import VecEnv
-from rsl_rl.modules import (
+import mature_rsl_rl
+from mature_rsl_rl.algorithms import AMPPPO
+from mature_rsl_rl.env import VecEnv
+from mature_rsl_rl.modules import (
     ActorCritic,
     ActorCriticRecurrent,
     Discriminator,
@@ -36,7 +36,7 @@ from rsl_rl.modules import (
     StudentTeacher,
     StudentTeacherRecurrent,
 )
-from rsl_rl.utils import AMPLoader, Normalizer, store_code_state
+from mature_rsl_rl.utils import AMPLoader, Normalizer, store_code_state
 
 
 def _migrate_train_cfg(train_cfg: dict) -> None:
@@ -162,8 +162,10 @@ class AmpOnPolicyRunner:
 
         # init amp loader
         # Resolve all body names from the environment's robot entity
-        robot_entity = self.env.unwrapped.scene["robot"]
-        all_body_names = robot_entity.body_names
+        if hasattr(self.env, "envs") and len(self.env.envs) > 0:
+            all_body_names = self.env.envs[0].body_names
+        else:
+            all_body_names = train_cfg["amp_body_names"]
         amp_data = AMPLoader(
             motion_file=train_cfg["amp_motion_files"],
             body_names=train_cfg["amp_body_names"],
@@ -247,7 +249,7 @@ class AmpOnPolicyRunner:
         self.tot_timesteps = 0
         self.tot_time = 0
         self.current_learning_iteration = 0
-        self.git_status_repos = [rsl_rl.__file__]
+        self.git_status_repos = [mature_rsl_rl.__file__]
 
     def learn(self, num_learning_iterations: int, init_at_random_ep_len: bool = False):  # noqa: C901
         # initialize writer
@@ -257,12 +259,12 @@ class AmpOnPolicyRunner:
             self.logger_type = self.logger_type.lower()
 
             if self.logger_type == "neptune":
-                from rsl_rl.utils.neptune_utils import NeptuneSummaryWriter
+                from mature_rsl_rl.utils.neptune_utils import NeptuneSummaryWriter
 
                 self.writer = NeptuneSummaryWriter(log_dir=self.log_dir, flush_secs=10, cfg=self.cfg)
                 self.writer.log_config(self.env.cfg, self.cfg, self.alg_cfg, self.policy_cfg)
             elif self.logger_type == "wandb":
-                from rsl_rl.utils.wandb_utils import WandbSummaryWriter
+                from mature_rsl_rl.utils.wandb_utils import WandbSummaryWriter
 
                 self.writer = WandbSummaryWriter(log_dir=self.log_dir, flush_secs=10, cfg=self.cfg)
                 self.writer.log_config(self.env.cfg, self.cfg, self.alg_cfg, self.policy_cfg)

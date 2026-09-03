@@ -62,4 +62,8 @@ class AMPLoader:
 
         return np.stack(s_list), np.stack(s_next_list)
 
+    def feed_forward_generator(self, num_mini_batch, mini_batch_size):
+        for _ in range(num_mini_batch):
+            yield self.sample_batch(mini_batch_size)
+
     
