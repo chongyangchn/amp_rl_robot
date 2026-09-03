@@ -30,7 +30,7 @@ def main():
     runner = AMPRunner(
         env,
         cfg,
-        log_dir="logs/amp_rsl_beta_v2",
+        log_dir="logs/amp_walk_forward_v3",
         device=device,
     )
 

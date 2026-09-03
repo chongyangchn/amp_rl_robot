@@ -42,7 +42,8 @@ class AMPPPO:
 
     def act(self, obs):
         self._prev_amp_obs = obs["amp"].clone()
-        return self.ppo.act(obs)
+        actions = self.ppo.act(obs)
+        return torch.clamp(actions, -1.0, 1.0)
 
     def process_env_step(self, obs, rewards, dones, extras):
         next_amp = obs["amp"].clone()

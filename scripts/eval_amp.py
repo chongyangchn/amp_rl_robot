@@ -17,7 +17,8 @@ def main():
     device = "cuda:0" if torch.cuda.is_available() else "cpu"
 
     # checkpoint_path = "logs/amp_rsl_v1/model_2000.pt"
-    checkpoint_path = "logs/amp_rsl_beta_v2/model_600.pt"
+    # checkpoint_path = "logs/amp_rsl_beta_v2/model_600.pt" 
+    checkpoint_path = "logs/amp_walk_forward_v3/model_3200.pt"
 
     cfg = copy.deepcopy(TRAIN_CFG)
     motion_loader = MotionLoader(cfg["amp"]["motion_dir"])
@@ -52,6 +53,7 @@ def main():
         while viewer.is_running():
             with torch.no_grad():
                 action = ppo.actor(obs)
+                action = torch.clamp(action, -1.0, 1.0)
 
             obs, rewards, dones, extras = env.step(action.to(env.device))
             obs = obs.to(device)

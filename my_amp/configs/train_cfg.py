@@ -35,7 +35,7 @@ TRAIN_CFG = {
     },
     "amp": {
         # "motion_dir": "data/motions",
-        "motion_dir": "data/motions_walk_250",
+        "motion_dir": "data/motions_walk_forward",
         "body_names": [
             "pelvis", "torso_link",
             "left_hip_yaw_link", "left_knee_link", "left_ankle_pitch_link",
@@ -67,7 +67,7 @@ TRAIN_CFG = {
         "multi_gpu": None,
 
     "motion": {
-        "motion_dir": "data/motions_walk_250",
+        "motion_dir": "data/motions_walk_forward",
         "reset_from_ref_prob": 0.8,
         "use_ref_command": True,
     }
