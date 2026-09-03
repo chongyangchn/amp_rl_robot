@@ -18,7 +18,7 @@ def main():
 
     # checkpoint_path = "logs/amp_rsl_v1/model_2000.pt"
     # checkpoint_path = "logs/amp_rsl_beta_v2/model_600.pt" 
-    checkpoint_path = "logs/amp_walk_forward_v3/model_3200.pt"
+    checkpoint_path = "logs/amp_mature_walk_forward_v1/model_9800.pt"
 
     cfg = copy.deepcopy(TRAIN_CFG)
     motion_loader = MotionLoader(cfg["amp"]["motion_dir"])
