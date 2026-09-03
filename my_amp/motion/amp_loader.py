@@ -1,5 +1,6 @@
 from pathlib import Path
 import numpy as np
+import torch
 
 from my_amp.amp.amp_obs import compute_amp_features
 
@@ -64,6 +65,7 @@ class AMPLoader:
 
     def feed_forward_generator(self, num_mini_batch, mini_batch_size):
         for _ in range(num_mini_batch):
-            yield self.sample_batch(mini_batch_size)
+            s, s_next = self.sample_batch(mini_batch_size)
+            yield torch.from_numpy(s).float(), torch.from_numpy(s_next).float()
 
     
