@@ -115,7 +115,7 @@ class G1Env:
         # 目标高度（XML 里 pelvis 在 0.793，加一点作为站立高度）
         self.target_height = 0.77
         self.default_root_height = self.data.qpos[2]
-        self.command_lin_range = (-0.2, 0.6)
+        self.command_lin_range = (0.2, 0.6)
         self.command_yaw_range = (-0.5, 0.5)
 
         # 速度指令（训练循环里可以重置它）

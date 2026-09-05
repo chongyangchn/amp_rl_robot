@@ -27,7 +27,7 @@ def main():
     runner = AmpOnPolicyRunner(
         env,
         cfg,
-        log_dir="logs/amp_mature_walk_forward_v1",
+        log_dir="logs/amp_mature_walk_forward_v2",
         device=device,
     )
     runner.learn(cfg["max_iterations"])

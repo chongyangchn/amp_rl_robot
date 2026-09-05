@@ -72,14 +72,13 @@ def compute_task_reward(env, action):
 
     total = (
         1.0 * track_lin_vel
-        + 2.0 * track_ang_vel
+        + 1.0 * track_ang_vel
         + 1.0 * height_reward
-        + 1.0 * upright_reward
-        + 1.0 * body_ang_vel_reward
-        + 0.5 * survival_reward
-        + 1.0 * gait_reward
+        + 0.5 * upright_reward
+        + 0.5 * body_ang_vel_reward
+        + 0.5 * gait_reward
         - 0.01 * action_rate
-        - 1.00 * action_magnitude
+        - 0.10 * action_magnitude
         - 0.25 * foot_slip
         - 2.5e-7 * joint_acc
         - 10.0 * joint_pos_limits

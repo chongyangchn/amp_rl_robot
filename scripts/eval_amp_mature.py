@@ -17,7 +17,8 @@ from mature_rsl_rl.modules import ActorCritic, EmpiricalNormalization
 def main():
     device = "cuda:0" if torch.cuda.is_available() else "cpu"
     cfg = copy.deepcopy(TRAIN_CFG_MATURE)
-    checkpoint_path = "logs/amp_mature_walk_forward_v1/model_800.pt"
+    # checkpoint_path = "logs/amp_mature_walk_forward_v1/model_5000.pt"
+    checkpoint_path = "logs/amp_mature_walk_forward_v2/model_9800.pt"
 
     motion_loader = MotionLoader(cfg["amp_motion_files"])
     env = G1VecEnv(

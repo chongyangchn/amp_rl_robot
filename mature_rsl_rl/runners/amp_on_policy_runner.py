@@ -294,6 +294,8 @@ class AmpOnPolicyRunner:
 
         # Book keeping
         ep_infos = []
+        reward_term_sums = {}
+        termination_sums = {}
         rewbuffer = deque(maxlen=100)
         lenbuffer = deque(maxlen=100)
         cur_reward_sum = torch.zeros(self.env.num_envs, dtype=torch.float, device=self.device)
@@ -325,6 +327,11 @@ class AmpOnPolicyRunner:
                     actions = self.alg.act(obs, privileged_obs, amp_obs)
                     # Step the environment
                     obs, rewards, dones, infos = _unpack_step(*self.env.step(actions.to(self.env.device)))
+                    for term_dict in infos.get("reward_terms", []):
+                        for key, value in term_dict.items():
+                            reward_term_sums[key] = reward_term_sums.get(key, 0.0) + float(value)
+                    for reason, count in infos.get("termination_reasons", {}).items():
+                        termination_sums[reason] = termination_sums.get(reason, 0) + count
                     next_amp_obs = infos["observations"]["amp"]
                     # Move to device
                     obs, rewards, dones, next_amp_obs = (
@@ -472,6 +479,13 @@ class AmpOnPolicyRunner:
         self.writer.add_scalar("Perf/total_fps", fps, locs["it"])
         self.writer.add_scalar("Perf/collection time", locs["collection_time"], locs["it"])
         self.writer.add_scalar("Perf/learning_time", locs["learn_time"], locs["it"])
+
+        reward_steps = self.num_steps_per_env * self.env.num_envs
+        for name, value in locs.get("reward_term_sums", {}).items():
+            self.writer.add_scalar(f"Reward/{name}", value / reward_steps, locs["it"])
+
+        for name, value in locs.get("termination_sums", {}).items():
+            self.writer.add_scalar(f"Termination/{name}", value, locs["it"])
 
         # -- Training
         if len(locs["rewbuffer"]) > 0:
