@@ -320,6 +320,8 @@ class AmpOnPolicyRunner:
         tot_iter = start_iter + num_learning_iterations
         for it in range(start_iter, tot_iter):
             start = time.time()
+            reward_term_sums = {}
+            termination_sums = {}
             # Rollout
             with torch.inference_mode():
                 for _ in range(self.num_steps_per_env):
