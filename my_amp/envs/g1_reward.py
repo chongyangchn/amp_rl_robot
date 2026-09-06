@@ -39,6 +39,7 @@ def compute_task_reward(env, action):
     joint_acc = float(np.mean(np.square(env.data.qacc[6:])))
 
     joint_pos = env.data.qpos[7:]
+    joint_delta = joint_pos - env.default_joint_pos
     joint_pos_limits = float(
         np.mean(
             np.maximum(env.joint_low - joint_pos, 0.0)
@@ -70,13 +71,38 @@ def compute_task_reward(env, action):
         - 0.5 * abs(foot_contact[1] - right_should_contact)
     )
 
+    left_hip = joint_delta[0]
+    right_hip = joint_delta[6]
+    left_knee = joint_delta[3]
+    right_knee = joint_delta[9]
+    left_ankle_pitch = joint_delta[4]
+    right_ankle_pitch = joint_delta[10]
+    left_ankle_roll = joint_delta[5]
+    right_ankle_roll = joint_delta[11]
+    left_shoulder = joint_delta[15]
+    right_shoulder = joint_delta[22]
+
+    leg_motion = abs(left_hip) + abs(right_hip) + abs(left_knee) + abs(right_knee)
+    leg_motion_reward = float(np.clip(leg_motion / 1.2, 0.0, 1.0))
+
+    ankle_motion = abs(left_ankle_pitch) + abs(right_ankle_pitch) + abs(left_ankle_roll) + abs(right_ankle_roll)
+    ankle_use_reward = float(np.clip(ankle_motion / 0.5, 0.0, 1.0))
+
+    arm_swing_reward = (
+        float(np.exp(-((left_shoulder - right_hip * 0.6) ** 2) / 0.5 ** 2))
+        + float(np.exp(-((right_shoulder - left_hip * 0.6) ** 2) / 0.5 ** 2))
+    ) * 0.5
+
     total = (
         1.0 * track_lin_vel
         + 1.0 * track_ang_vel
         + 1.0 * height_reward
-        + 0.5 * upright_reward
-        + 0.5 * body_ang_vel_reward
+        + 1.0 * upright_reward
+        + 1.0 * body_ang_vel_reward
         + 0.5 * gait_reward
+        + 0.3 * leg_motion_reward
+        + 0.3 * ankle_use_reward
+        + 0.3 * arm_swing_reward
         - 0.01 * action_rate
         - 0.10 * action_magnitude
         - 0.25 * foot_slip
@@ -93,6 +119,9 @@ def compute_task_reward(env, action):
         "body_ang_vel": body_ang_vel_reward,
         "survival": survival_reward,
         "gait": gait_reward,
+        "leg_motion": leg_motion_reward,
+        "ankle_use": ankle_use_reward,
+        "arm_swing": arm_swing_reward,
         "action_rate": action_rate,
         "action_magnitude": action_magnitude,
         "foot_slip": foot_slip,
