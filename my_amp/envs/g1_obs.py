@@ -55,8 +55,4 @@ def get_policy_obs(env):
 
 
 def get_critic_obs(env):
-    policy = get_policy_obs(env)
-    rot = _get_rot(env)
-    local_lin_vel = rot.T @ env.data.qvel[:3]
-    amp = env.get_amp_obs(env.amp_body_idx, env.amp_anchor_idx)
-    return np.concatenate([policy, local_lin_vel, amp])
+    return get_policy_obs(env)
