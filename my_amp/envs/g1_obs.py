@@ -22,7 +22,6 @@ def _get_gait_phase(env):
 def get_policy_obs(env):
     rot = _get_rot(env)
 
-    local_lin_vel = rot.T @ env.data.qvel[:3]
     local_ang_vel = rot.T @ env.data.qvel[3:6]
     projected_gravity = rot.T @ np.array([0.0, 0.0, -1.0])
 
@@ -31,28 +30,20 @@ def get_policy_obs(env):
         / (env.joint_high - env.joint_low)
     ) - 1.0
     joint_vel = env.data.qvel[6:] * 0.05
-    foot_contact = env._get_foot_contacts()
-
-    height = env.data.qpos[2]
-    height_deviation = height - env.target_height
-    torso_xmat = env.data.site_xmat[env.torso_site].reshape(3, 3)
-    upright = torso_xmat[2, 2]
-
-    gait_phase = _get_gait_phase(env)
 
     return np.concatenate([
-        local_lin_vel,
         local_ang_vel,
         projected_gravity,
         env.command,
         joint_pos_norm,
         joint_vel,
         env.prev_action,
-        foot_contact,
-        [height_deviation, upright],
-        gait_phase,
     ])
 
 
 def get_critic_obs(env):
-    return get_policy_obs(env)
+    policy = get_policy_obs(env)
+    rot = _get_rot(env)
+    local_lin_vel = rot.T @ env.data.qvel[:3]
+    amp = env.get_amp_obs(env.amp_body_idx, env.amp_anchor_idx)
+    return np.concatenate([policy, local_lin_vel, amp])

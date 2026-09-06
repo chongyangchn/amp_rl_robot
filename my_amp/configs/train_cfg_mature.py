@@ -2,7 +2,7 @@ TRAIN_CFG_MATURE = {
     "max_episode_length": 5000,
     "num_steps_per_env": 24,
     "save_interval": 200,
-    "max_iterations": 20000,
+    "max_iterations": 10000,
     "num_envs": 64,
     "seed": 42,
     "multi_gpu": None,

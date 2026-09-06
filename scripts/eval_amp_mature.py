@@ -19,7 +19,7 @@ def main():
     cfg = copy.deepcopy(TRAIN_CFG_MATURE)
     # checkpoint_path = "logs/amp_mature_walk_forward_v1/model_5000.pt"
     # checkpoint_path = "logs/amp_mature_walk_forward_v3/model_9999.pt"
-    checkpoint_path = "logs/amp_mature_walk_forward_v4/model_19999.pt"
+    checkpoint_path = "logs/amp_mature_walk_forward_v5/model_9999.pt"
 
     motion_loader = MotionLoader(cfg["amp_motion_files"])
     env = G1VecEnv(
