@@ -68,6 +68,10 @@ def compute_task_reward(env, action):
         foot_tilt += float(foot_up[0] ** 2 + foot_up[1] ** 2)
     foot_flat_reward = float(np.exp(-foot_tilt / 0.1))
 
+    contacts, heel, toe, forces = env._get_foot_contact_details()
+    heel_toe_penalty = float(np.mean(heel + toe) * 0.5)
+    foot_center_reward = 1.0 - heel_toe_penalty
+
     foot_contact = env._get_foot_contacts()
     phase_val = (env.step_count * env.dt) % env.gait_period
     left_should_contact = 1.0 if np.sin(2.0 * np.pi * phase_val / env.gait_period) > 0.0 else 0.0
@@ -111,6 +115,7 @@ def compute_task_reward(env, action):
         + 0.3 * ankle_use_reward
         + 0.3 * arm_swing_reward
         + 0.5 * foot_flat_reward
+        + 0.5 * foot_center_reward
         - 0.01 * action_rate
         - 0.10 * action_magnitude
         - 0.25 * foot_slip
@@ -131,6 +136,7 @@ def compute_task_reward(env, action):
         "ankle_use": ankle_use_reward,
         "arm_swing": arm_swing_reward,
         "foot_flat": foot_flat_reward,
+        "foot_center": foot_center_reward,
         "action_rate": action_rate,
         "action_magnitude": action_magnitude,
         "foot_slip": foot_slip,

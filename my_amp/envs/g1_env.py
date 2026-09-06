@@ -144,6 +144,43 @@ class G1Env:
                                   | (body2 == self._right_foot_body)))
         return contact
 
+    def _get_foot_contact_details(self):
+        contacts = np.zeros(2, dtype=np.float32)
+        heel = np.zeros(2, dtype=np.float32)
+        toe = np.zeros(2, dtype=np.float32)
+        forces = np.zeros(2, dtype=np.float32)
+
+        if self.data.ncon == 0:
+            return contacts, heel, toe, forces
+
+        for i in range(self.data.ncon):
+            geom1 = self.data.contact.geom1[i]
+            geom2 = self.data.contact.geom2[i]
+            body1 = self.model.geom_bodyid[geom1]
+            body2 = self.model.geom_bodyid[geom2]
+
+            if body1 in (self._left_foot_body, self._right_foot_body) or body2 in (self._left_foot_body, self._right_foot_body):
+                foot_idx = 0 if (body1 == self._left_foot_body or body2 == self._left_foot_body) else 1
+                foot_body = self._left_foot_body if foot_idx == 0 else self._right_foot_body
+                foot_site = self.left_foot_site if foot_idx == 0 else self.right_foot_site
+
+                foot_rot = self.data.xmat[foot_body].reshape(3, 3)
+                contact_pos = self.data.contact.pos[i]
+                foot_pos = self.data.site_xpos[foot_site]
+                local_pos = foot_rot.T @ (contact_pos - foot_pos)
+
+                contacts[foot_idx] = 1.0
+                if local_pos[0] < -0.01:
+                    heel[foot_idx] = 1.0
+                elif local_pos[0] > 0.01:
+                    toe[foot_idx] = 1.0
+
+                force = np.zeros(6, dtype=np.float64)
+                mujoco.mj_contactForce(self.model, self.data, i, force)
+                forces[foot_idx] = max(float(forces[foot_idx]), float(np.linalg.norm(force[:3])))
+
+        return contacts, heel, toe, forces
+
     # 1、获取观测量
     def _get_obs(self):
         """
